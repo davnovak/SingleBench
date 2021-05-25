@@ -1,0 +1,14 @@
+Package: SingleBench
+Type: Package
+Title: Framework for benchmarking and optimising dimension-reduction and clustering pipelines in expression data analysis
+Version: 1.0
+Date: 2020-10-09
+Author: David Novak
+Maintainer: David Novak <davidnovakcz@hotmail.com>
+Imports: magrittr, dplyr, purrr, ggplot2, scales, stringr, pheatmap, iterators, matrixStats, foreach, parallel, progress, RANN, RColorBrewer, rhdf5, SummarizedExperiment, HDCytoData, crayon, clusterSim, FlowSOM, Rphenograph, flexclust, uwot, Rtsne, clue, dimRed, coRanking, scattermore, flowCore, doParallel, caret, reshape, gtable, kableExtra, grid, gridExtra, cowplot, Rcpp, aricode
+Suggests: reticulate, ivis, destiny
+Description: SingleBench provides an extensible framework for applying dimension-reduction, clustering tools and combinations thereof to single-cell data. SingleBench is built to allow for rapid design of pipelines to benchmark methods and find optimal parameters, easy addition of new method wrappers and straightforward production of graphical reports.
+License: MIT
+RoxygenNote: 7.1.1
+Roxygen: list(markdown = TRUE)
+LinkingTo: Rcpp
