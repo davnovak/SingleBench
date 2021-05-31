@@ -30,6 +30,7 @@ importFrom(ggplot2, ggtitle)
 importFrom(ggplot2, theme)
 importFrom(ggplot2, theme_minimal)
 importFrom(ggplot2, theme_dark)
+importFrom(ggplot2, theme_grey)
 importFrom(ggplot2, facet_wrap)
 
 export("WrapTool")

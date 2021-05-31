@@ -382,6 +382,34 @@ AlignSubpipelines <- function(
           stop(paste0('Missing n-parameter values for clustering step of subpipeline ', idx))
     }
     
+    for (idx in seq_along(n_params)) {
+      if (isTRUE(n_params[[idx]]$expand)) {
+        if (length(n_params[[idx]]$projection) > 0 && length(n_params[[idx]]$clustering) > 0) {
+          grid <- expand.grid(n_params[[idx]]$projection, n_params[[idx]]$clustering)
+          n_params[[idx]]$projection <- grid[, 1]
+          n_params[[idx]]$clustering <- grid[, 2]
+        }
+      } else {
+        lp <- length(n_params[[idx]]$projection)
+        lc <- length(n_params[[idx]]$clustering)
+        if (lp > 0 && lc > 0 && lp != lc) {
+          if (lc > lp) {
+            if (lc %% lp == 0) {
+              n_params[[idx]]$projection <- rep(n_params[[idx]]$projection, times = lc %/% lp)
+            } else {
+              stop(paste0('Subpipeline ', idx, 'n-parameter values clustering vector length not a multiple of projection vector length'))
+            }
+          } else if (lp > lc) {
+            if (lp %% lc == 0) {
+              n_params[[idx]]$clustering <- rep(n_params[[idx]]$clustering, times = lp %/% lc)
+            } else {
+              stop(paste0('Subpipeline ', idx, 'n-parameter values projection vector length not a multiple of clustering vector length'))
+            }
+          }
+        }
+      }
+    }
+    
     benchmark$n_params     <- n_params
     
     benchmark$executable <- TRUE

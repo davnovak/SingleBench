@@ -54,7 +54,7 @@ PlotRMSDToSize <- function(
   nn <- GetNParameterIterationName(benchmark, idx.subpipeline, idx.n_param)
   
   ggplot(data, aes(x = Size, y = RMSD, col = ClassType)) +
-    geom_point(size = 4) + geom_text(aes(label = ClusterIndex), size = 2.7, col = 'black') +
+    geom_point(size = 4, alpha = 0.8) + geom_text(aes(label = ClusterIndex), size = 2.7, col = 'black') +
     facet_wrap(~ Population) + theme_grey() +
     ggtitle('RMSD/size ratios of labelled populations and matched clusters', nn)
 }

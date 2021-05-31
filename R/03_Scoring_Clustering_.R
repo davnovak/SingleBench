@@ -17,14 +17,14 @@ ScoreClustering <- function(
     nmi <- aricode::NMI(c1 = annotation[idcs_assigned], c2 = result$ClusteringVector[idcs_assigned])
     cluster_matching <- Jacc(c1 = annotation, c2 = result$ClusteringVector, obj = 'f1', unassigned = unassigned_labels, generate_plot = FALSE, verbose = FALSE)
     
-    matches_bijective <- matrix(c(names(cluster_matching$Results.Bijective$Matches), cluster_matching$Results.Bijective$Matches), ncol = 2)
+    matches_bijective <- data.frame(matrix(c(names(cluster_matching$Results.Bijective$Matches), cluster_matching$Results.Bijective$Matches), ncol = 2))
     colnames(matches_bijective) <- c('Population', 'Cluster')
     
-    matches_argmaxf1_cluster <- matrix(c(names(cluster_matching$Results.FixedC1$Matches), cluster_matching$Results.FixedC1$Matches), ncol = 2)
+    matches_argmaxf1_cluster <- data.frame(matrix(c(names(cluster_matching$Results.FixedC1$Matches), cluster_matching$Results.FixedC1$Matches), ncol = 2))
     colnames(matches_argmaxf1_cluster) <- c('Population', 'Cluster')
     
-    matches_argmaxf1_gate <- matrix(c(names(cluster_matching$Results.FixedC2$Matches), cluster_matching$Results.FixedC2$Matches), ncol = 2)
-    colnames(matches_argmaxf1_gate) <- c('Population', 'Cluster')
+    matches_argmaxf1_gate <- data.frame(matrix(c(names(cluster_matching$Results.FixedC2$Matches), cluster_matching$Results.FixedC2$Matches), ncol = 2))
+    colnames(matches_argmaxf1_gate) <- c('Cluster', 'Population')
     
     scores <- list(
       'Stability Analysis'                                    = 'single',

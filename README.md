@@ -2,67 +2,75 @@
 
 `SingleBench` is an `R` framework and API for
 
-* applying projection (denoising/dimension-reduction) and clustering to single-cell data (flow cytometry, mass cytometry, CITE-seq, single-cell RNA-seq),
+* applying projection (de-noising/dimension-reduction) and clustering to cytometry (and other single-cell) datasets,
 
 * benchmarking performance of these pipelines on various datasets,
 
 * optimising parameters to boost performance of automated detection of cell states and cell types.
 
+Since there is little consensus regarding the best evaluation metrics for clustering quality assessment, `SingleBench` is built to provide a rapid overview of how each user-defined set-up performs on a representative dataset, including which cell populations are better or worse detected by it. Both supervised and unsupervised evaluation of clustering is reported.
+
 `SingleBench` is easy to extend. It includes a toolbox to create wrappers for new projection and clustering algorithms rapidly.
-It makes use of auxialiary `HDF5` files to store intermediate results of evaluation while minimising memory requirements.
-Furthermore, it allows users to take advantage of multiple CPU cores or submit jobs to a `gridengine` high-performance cluster.
+It makes use of auxialiary `HDF5` files to store intermediate results of evaluation while minimising memory requirements (and preventing loss of data due to interrupted evaluation).
+Repeated runs of clustering algorithms (for stability analysis) can be parallelised
 
-## Motivation
+## Installation
 
-`SingleBench` is being created for a new extensive benchmark study.
-It is somewhat inspired by the Weber et al. (2016) benchmarking study (*DOI: 10.1002/cyto.a.23030*) and other papers that have come out since.
-It aims to provide a more powerful evaluation framework (similar in some regards to `snakemake` or `pipeComp`) and explore the notion of denoising and feature extraction prior to clustering.
+Install `SingleBench` using the package `devtools` from your `R` console:
 
-## Tutorial
+```
+devtools::install_github('davnovak/SingleBench')
+```
+
+This will install all the dependencies needed to use `SingleBench`.
+However, to run individual projection/clustering tools with `SingleBench`, you will need to install them also.
+
+## Usage
 
 After installation, the `SingleBench` package needs to be loaded.
-(Upon loading, method wrappers for projection and clustering tools are loaded into the global namespace.)
+This exports method wrappers for projection and clustering tools to the global namespace.
 
 ```
 library(SingleBench)
 ```
 
+A start-up messages will give you a read-out of available projection/clustering tools and potential missing packages.
+
 The initial step is to set up a benchmark pipeline.
 A single pipeline is made up of subpipelines, which are combinations of tools and their parameters.
 Each subpipeline can have one or both of two modules: *projection* and *clustering*.
-For instance, a single subpipeline for data smoothing (simple denoising algorithm), followed by `ivis` dimension reduction and `FlowSOM` clustering is created using this syntax:
+For instance, a single subpipeline for data smoothing (a simple denoising algorithm), followed by clustering is created using this syntax:
 
 ```
 subpipelines <- list()
 subpipelines[[1]] <- 
     Subpipeline(
-        projection = list(
-            Module(Fix('smooth', n_iter = 1, k = 50)),
-            Module(Fix('ivis'), n_param = 'latent_dim')
-        ),
-        clustering = Module(Fix('FlowSOM', grid_width = 25, grid_height = 25), n_param = 'n_clusters')
+        projection = Module(Fix('smooth', k = 50), n_param = 'n_iter'),
+        clustering = Module(Fix('FlowSOM', grid_width = 10, grid_height = 10), n_param = 'n_clusters')
     )
- ```
+```
  
-Here, `Fix` takes a method (for which a wrapper exists in the global namespace) and fixes its parameter values.
-The wrapper-with-parameters is plugged into a `Module`, which *may* specify an *n*-parameter: this is a single parameter of interest, such as latent-space dimensionality or target number of clusters.
-A single subpipeline (or parts thereof) can be run multiple times, iterating over different *n*-parameter values (to see how they affect performance).
+Here, `Fix` associates a method with input parameter values.
+This produces a wrapper with parameters, which is then plugged into a `Module`, which *may* specify an *n*-parameter: this is a numeric parameter that is kept variable for executing parameter sweeps over a range of values.
 
-Both the projection step and the clustering step of a subpipeline are made up of a module or a list of modules (applied sequentially).
-The projection step, as well as the clustering step, may only have a single *n*-parameter each.
-To iterate over latent-space dimensionality of 20, 15 and 10 and target cluster count of 35, 40 and 45 (for each of the projections), use the following set-up:
+Both the projection step and the clustering step can chain multiple modules (instead of a single `Module`, use a sequential `list` of modules).
+Either or both the projection step and clustering step may include and *n*-parameter.
+In our example, we can sweep over the iteration-count of our denoising algorithm and target number of clusters in the clustering step:
  
 ```
 n_params <- list()
 n_params[[1]] <- list(
-    projection = rep(c(20, 15, 10), each = 3),
-    clustering = rep(c(35, 40, 45), times = 3)
+    projection = rep(c(NA, 1, 2, 3), times = 2),
+    clustering = rep(c(30, 40), each = 4)
 )
 ```
+
+If *n*-parameter values for both projection and for clustering are given, they will be aligned (of one of the vectors is shorter, the same procedure as for aligning vectors in a matrix in `R` is used).
  
-(Alternatively, setting an *n*-parameter value of projection to `NA` will result in omitting the projection step in that iteration.)
+Setting an *n*-parameter value of projection to `NA` will result in omitting the projection step in that iteration.
+If an *n*-parameter value is re-used in the projection step, the projection results will get recycled.
  
-To create a second subpipeline that re-uses the projection step (and its results), simply clone it from the first one:
+To create a second subpipeline that re-uses the projection step (and its results), simply use the same *n*-parameter values in the projection step:
 
 ```
 subpipelines[[2]] <-
@@ -71,14 +79,17 @@ subpipelines[[2]] <-
         clustering = Module(Fix('Depeche'), n_param = 'fixed_penalty')
     )      
 n_params[[2]] <- list(
-    clustering = rep(c(0.1, 0.3, 0.5), times = 3)
+	 projection = rep(c(NA, 1, 2, 3), times = 3),
+    clustering = rep(c(0.1, 0.3, 0.5), each = 4),
+    expand = TRUE
 )
 ```
 
 Finally, we can construct a `Benchmark` object with these settings.
 For demonstration, we use the package `HDCytoData` to retrieve a cytometry dataset as a `SummarizedExperiment` object for use in our benchmark.
-We will only want to keep *type* markers (per annotation of the dataset) and use an *asinh* (cofactor = 5) transformation.
-Furthermore, we specify that there exists a label for unannotated cells ('*unassigned*'), which need to be handled differently when calculating supervised evaluation metrics.
+We will only want to keep *type* markers and use an *asinh* (cofactor = 5) transformation.
+We also specify that there exists a label for unannotated cells ('*unassigned*'), which needs to be handled differently when calculating supervised evaluation metrics.
+For evaluating stability of results, we will run each clustering step 5 times.
 
 ```
 library(HDCytoData)
@@ -90,15 +101,17 @@ b <- Benchmark(
   input_marker_types = 'type',
   unassigned_labels  = 'unassigned',
   subpipelines       = subpipelines,
-  n_params           = n_params
+  n_params           = n_params,
+  stability_repeat   = 5
 )
 ```
 
 This will set up our pipeline, load input data and create an auxiliary HDF5 file to store any large chunks of data.
 
-The next step is to evaluate (run) our benchmark pipeline. 
+The next step is to check if the pipeline set-up is correct and evaluate (run) our benchmark pipeline. 
 
 ```
+print(b)
 Evaluate(b)
 ```
 
@@ -111,7 +124,7 @@ Optionally, you can generate a 2-dimensional layout of your data for visualisati
 AddLayout(b, method = Fix('UMAP', latent_dim = 2))
 ```
 
-To extract results of your benchmark, you can `print` your `Benchmark` object or use the getters `GetAnnotation`, `GetClustering`, `GetProjection` and `GetLayout`.
+To extract results of your benchmark, you can use the getters `GetAnnotation`, `GetClustering`, `GetProjection` and `GetLayout`.
 
 ```
 print(b)                                 # get a read-out of setup and evalution metrics
@@ -119,6 +132,11 @@ gates <- GetAnnotation(b) # get vector of manual gates
 clus <- GetClustering(b, idx.subpipeline = 1, idx.n_param = 2)
                                          # get vector of cluster indices (for n_clusters=40)
 layout <- GetLayout(b)    # extract the 2-d layout
+
+cs <- GetClusterSizes(b, 1, 2)
+ps <- GetPopulationSizes(b)
+cr <- GetRMSDPerCluster(b, 1, 2)
+pr <- GetRMSDPerPopulation(b, 1, 2)
 ```
 
 You can also view the values of evaluation metrics or create informative plots.
@@ -132,6 +150,7 @@ PlotClusterHeatmap(b, 1, 2)
 PlotCompositionMap(b, 1)
 PlotNParameterMap_Clustering(b, 1)
 ShowReadout_Clustering(b, 1)
+PlotRMSDToSize(b, 1, 1)
 ```
 
 ## Documentation

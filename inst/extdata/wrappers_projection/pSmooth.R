@@ -8,6 +8,7 @@ wrapper.projection.pSmooth <- WrapTool(
     if (n_iter == 0)
       return(input)
     k <- min(ncol(knn$Distances), k)
+    mode <- match.arg(mode, c('Uniform', 'Strong', 'Local', 'Weak'))
     w <-
       if (mode == 'Uniform')
         matrix(1, nrow = nrow(knn$Indices), ncol = ncol(knn$Indices))
@@ -18,7 +19,9 @@ wrapper.projection.pSmooth <- WrapTool(
       else if (mode == 'Weak')
         t(apply(knn$Distances, 1, function(x) exp(-x^2 / max(x))))
     segs <- rep(1, nrow(input))
-    res <- .Call('_SingleBench_pSmoothSingleIter', PACKAGE = 'SingleBench', input, knn$Indices, w, 1, phi2, lambda, segs, k)
+    res <- input
+    for (idx_iter in 1:n_iter)
+      res <- .Call('_SingleBench_pSmoothSingleIter', PACKAGE = 'SingleBench', res, knn$Indices, w, 1, phi2, lambda, segs, k)
     res
   }
 )
