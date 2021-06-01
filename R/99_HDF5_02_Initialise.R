@@ -67,14 +67,15 @@ HDF5_InitialiseEvaluationResults <- function(
               idx.n_param <- NULL
             
             ## Create a 'Projection' group for every n-parameter iteration
-            rhdf5::h5createGroup(
-              file = benchmark$h5_path,
-              group = .h5_slotname(
-                idx.subpipeline = idx.subpipeline,
-                tool_type = 'Projection',
-                idx.n_param = idx.n_param
+            if (!is.null(idx.n_param))
+              rhdf5::h5createGroup(
+                file = benchmark$h5_path,
+                group = .h5_slotname(
+                  idx.subpipeline = idx.subpipeline,
+                  tool_type = 'Projection',
+                  idx.n_param = idx.n_param
+                )
               )
-            )
             
             ## If multiple modules are chained within the projection step, create a group to store results for each module
             n_modules_proj <- GetProjectionModuleCount(benchmark, idx.subpipeline)
@@ -91,16 +92,6 @@ HDF5_InitialiseEvaluationResults <- function(
                       idx.module = idx.module
                     )
                   )
-              )
-              ## Create slots to groups to store results, scores and (potential) reference pointers (for recycling results)
-              rhdf5::h5createGroup(
-                file = benchmark$h5_path,
-                group = .h5_slotname(
-                  idx.subpipeline = idx.subpipeline,
-                  tool_type = 'Projection',
-                  idx.n_param = idx.n_param,
-                  suffix = 'Result'
-                )
               )
               rhdf5::h5createGroup(
                 file = benchmark$h5_path,
@@ -167,25 +158,35 @@ HDF5_InitialiseEvaluationResults <- function(
               idx.n_param <- NULL
             
             ## Create a 'Clustering' group for every n-parameter iteration
-            rhdf5::h5createGroup(
-              file = benchmark$h5_path,
-              group = .h5_slotname(
-                idx.subpipeline = idx.subpipeline,
-                tool_type = 'Clustering',
-                idx.n_param = idx.n_param
+            if (!is.null(idx.n_param))
+              rhdf5::h5createGroup(
+                file = benchmark$h5_path,
+                group = .h5_slotname(
+                  idx.subpipeline = idx.subpipeline,
+                  tool_type = 'Clustering',
+                  idx.n_param = idx.n_param
+                )
               )
-            )
             
             ## Create slots to groups to store results, scores and (potential) reference pointers (for recycling results)
-            rhdf5::h5createGroup(
-              file = benchmark$h5_path,
-              group = .h5_slotname(
-                idx.subpipeline = idx.subpipeline,
-                tool_type = 'Clustering',
-                idx.n_param = idx.n_param,
-                suffix = 'Result'
-              )
-            )
+            # rhdf5::h5createGroup(
+            #   file = benchmark$h5_path,
+            #   group = .h5_slotname(
+            #     idx.subpipeline = idx.subpipeline,
+            #     tool_type = 'Clustering',
+            #     idx.n_param = idx.n_param,
+            #     suffix = 'ClusteringVector'
+            #   )
+            # )
+            # rhdf5::h5createGroup(
+            #   file = benchmark$h5_path,
+            #   group = .h5_slotname(
+            #     idx.subpipeline = idx.subpipeline,
+            #     tool_type = 'Clustering',
+            #     idx.n_param = idx.n_param,
+            #     suffix = 'Timing'
+            #   )
+            # )
             rhdf5::h5createGroup(
               file = benchmark$h5_path,
               group = .h5_slotname(

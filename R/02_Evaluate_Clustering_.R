@@ -19,6 +19,7 @@ EvalClustering <- function(
         if (verbose) { .msg('Evaluating subpipeline '); .msg_alt(idx.subpipeline); .msg(' of ' ); .msg_alt(benchmark$n_subpipelines); .msg('\n') }
         
         ## Get n-parameter values for this subpipeline (either from the clustering step or the projection step...)
+        npar_proj <- FALSE
         n_param_values <- benchmark$n_params[[idx.subpipeline]]$clustering
         if (length(n_param_values) == 0) {
           n_param_values <- benchmark$n_params[[idx.subpipeline]]$projection
