@@ -98,16 +98,11 @@
 }
 
 .h5writeProjectionResult <- function(
-  obj, benchmark, idx.subpipeline, idx.n_param
+  obj = NA, benchmark, idx.subpipeline, idx.n_param = NULL
 ) {
-  if (is.atomic(obj) && is.na(obj)) {
-    .h5writeDRNParamReference(benchmark, idx.subpipeline, idx.n_param)
-  } else {
-    slotname <- .h5_slotname(idx.subpipeline, 'Projection', idx.n_param)
-    rhdf5::h5write(NA, benchmark$h5_path, paste0(slotname, '/IsReferenceTo'))
-    suppressMessages(.h5writeNamedMatrix(obj$Projection, benchmark$h5_path, paste0(slotname, '/ProjectionResult')))
-    rhdf5::h5write(obj$Timing, benchmark$h5_path, paste0(slotname, '/Timing'))
-  }
+  slotname <- .h5_slotname(idx.subpipeline, 'Projection', idx.n_param)
+  suppressMessages(.h5writeNamedMatrix(obj$Projection, benchmark$h5_path, paste0(slotname, '/Result')))
+  rhdf5::h5write(obj$Timing, benchmark$h5_path, paste0(slotname, '/Timing'))
 }
 
 .h5writeProjectionIntermediate <- function(
@@ -119,7 +114,7 @@
     idx.n_param     = idx.n_param,
     idx.module      = idx.module
   )
-  suppressMessages(.h5writeNamedMatrix(obj, h5_path, paste0(slotname, '/ProjectionIntermediate')))
+  suppressMessages(.h5writeNamedMatrix(obj, h5_path, paste0(slotname, '/Intermediate')))
 }
 
 .h5writeClusteringIntermediate <- function(
@@ -135,50 +130,46 @@
   suppressMessages(.h5writeNamedMatrix(obj, benchmark$h5_path, paste0(slotname, '/ClusteringIntermediate')))
 }
 
-.h5writeProjectionSubpipelineReference <- function(
-  benchmark, idx.subpipeline, idx.n_param = NULL, idx_ref
+.h5writeProjectionReference <- function(
+  benchmark, idx.subpipeline, idx.n_param = NULL, idx.subpipeline_ref, idx.n_param_ref = NULL
 ) {
-  if (is.null(idx.n_param)) {
-    slotname <- .h5_slotname(idx.subpipeline, 'Projection')
-    rhdf5::h5delete(benchmark$h5_path, paste0(slotname, '/IsReferenceTo'))
-    rhdf5::h5write(idx_ref, benchmark$h5_path, paste0(slotname, '/IsReferenceTo'))
-  } else {
-    slotname <- .h5_slotname(idx.subpipeline, 'Projection', idx.n_param)
-    rhdf5::h5delete(benchmark$h5_path, paste0(slotname, '/IsReferenceTo'))
-    rhdf5::h5write(idx_ref, benchmark$h5_path, paste0(slotname, '/IsReferenceTo'))
-  }
-}
-
-.h5writeProjectionNParamReference <- function(
-  benchmark, idx.subpipeline, idx.n_param
-) {
-  npar_val <- benchmark$n_params[[idx.subpipeline]]$projection[idx.n_param]
-  
-  idx_ref <- which(benchmark$n_params[[idx.subpipeline]]$projection == -npar_val)[1]
   slotname <- .h5_slotname(idx.subpipeline, 'Projection', idx.n_param)
-  rhdf5::h5write(idx_ref, benchmark$h5_path, paste0(slotname, '/IsReferenceTo'))
+  
+  rhdf5::h5delete(benchmark$h5_path, paste0(slotname, '/IsReferenceToSubpipeline'))
+  rhdf5::h5write(idx.subpipeline_ref, benchmark$h5_path, paste0(slotname, '/IsReferenceToSubpipeline'))
+  
+  if (!is.null(idx.n_param) && !is.null(idx.n_param_ref)) {
+    rhdf5::h5delete(benchmark$h5_path, paste0(slotname, '/IsReferenceToNParamIteration'))
+    rhdf5::h5write(idx.n_param_ref, benchmark$h5_path, paste0(slotname, '/IsReferenceToNParamIteration'))
+  }
 }
 
 .h5readProjectionResult <- function(
-  benchmark, idx.subpipeline, idx.n_param
+  benchmark, idx.subpipeline, idx.n_param = NULL
 ) {
-  idx_subpipeline_ref <-
-    rhdf5::h5read(benchmark$h5_path, paste0(.h5_slotname(idx.subpipeline, 'Projection'), '/IsReferenceTo'))
-  idx_nparam_ref <-
-    rhdf5::h5read(benchmark$h5_path, paste0(.h5_slotname(idx.subpipeline, 'Projection', idx.n_param), '/IsReferenceTo'))
+  
+  idx_subpipeline_ref <- rhdf5::h5read(benchmark$h5_path, paste0(.h5_slotname(idx.subpipeline, 'Projection', idx.n_param), '/IsReferenceToSubpipeline'))
+  idx_nparam_ref <- if (!is.null(idx.n_param)) rhdf5::h5read(benchmark$h5_path, paste0(.h5_slotname(idx.subpipeline, 'Projection', idx.n_param), '/IsReferenceToNParamIteration')) else NA
+  
   if (is.na(idx_subpipeline_ref) || idx_subpipeline_ref < 0) {
     idx_subpipeline_ref <- idx.subpipeline
+  
   } else if (idx_subpipeline_ref == 0) {
     return(GetExpressionMatrix(benchmark))
+    
   }
+  
   if (is.na(idx_nparam_ref) || idx_nparam_ref < 0) {
     idx_nparam_ref <- idx.n_param
+    
   } else if (idx_nparam_ref == 0) {
     return(GetExpressionMatrix(benchmark))
+    
   }
+  
   slotname <- .h5_slotname(idx_subpipeline_ref, 'Projection', idx_nparam_ref)
   list(
-    Projection = .h5readNamedMatrix(benchmark$h5_path, paste0(slotname, '/ProjectionResult')),
+    Projection = .h5readNamedMatrix(benchmark$h5_path, paste0(slotname, '/Result')),
     Timing = rhdf5::h5read(benchmark$h5_path, paste0(slotname, '/Timing'))
   )
 }
@@ -218,7 +209,7 @@
   obj, benchmark, idx.subpipeline, idx.n_param
 ) {
   slotname <- .h5_slotname(idx.subpipeline, 'Projection', idx.n_param)
-  idx_ref <- rhdf5::h5read(benchmark$h5_path, paste0(slotname, '/IsReferenceTo'))
+  idx_ref <- rhdf5::h5read(benchmark$h5_path, paste0(slotname, '/IsReferenceToSubpipeline'))
   if (is.na(idx_ref) || idx_ref < 0) {
     rhdf5::h5createGroup(benchmark$h5_path, paste0(slotname, '/Scoring'))
     .h5write(obj[['Layout k-NNG']]$Indices, benchmark$h5_path, paste0(slotname, '/Scoring/LayoutkNNGIndices'))
@@ -234,12 +225,20 @@
 }
 
 .h5readProjectionScoring <- function(
-  benchmark, idx.subpipeline, idx.n_param
+  benchmark, idx.subpipeline, idx.n_param = NULL
 ) {
   slotname <- .h5_slotname(idx.subpipeline, 'Projection', idx.n_param)
-  idx_ref <- rhdf5::h5read(benchmark$h5_path, paste0(slotname, '/IsReferenceTo'))
-  if (!is.na(idx_ref) && idx_ref > 0)
-    slotname <- .h5_slotname(idx.subpipeline, 'Projection', idx_ref)
+  idx.subpipeline_ref <- rhdf5::h5read(benchmark$h5_path, paste0(slotname, '/IsReferenceToSubpipeline'))
+  idx.n_param_ref <-
+    if (!is.null(idx.n_param))
+      rhdf5::h5read(benchmark$h5_path, paste0(slotname, '/IsReferenceToNParamIteration'))
+    else
+      NULL
+  if (is.na(idx.n_param_ref) || idx.n_param_ref < 0)
+    idx.n_param_ref <- NULL
+  if (!is.na(idx.subpipeline_ref) && idx.subpipeline_ref > 0)
+    slotname <- .h5_slotname(idx.subpipeline_ref, 'Projection', idx.n_param_ref)
+  
   obj <- list()
   obj[['Layout k-NNG']] <- list(
     Indices = rhdf5::h5read(benchmark$h5_path, paste0(slotname, '/Scoring/LayoutkNNGIndices')),
@@ -257,15 +256,11 @@
 }
 
 .h5readClusteringInput <- function(
-  benchmark, idx.subpipeline, idx.n_param, null_if_exprs = FALSE
+  benchmark, idx.subpipeline, idx.n_param = NULL, null_if_exprs = FALSE
 ) {
-  
-  if (!is.null(benchmark$subpipelines[[idx.subpipeline]]$projection) && (!is.null(idx.n_param) && idx.n_param != 0)) {
-    if (IsClone(benchmark$subpipelines[[idx.subpipeline]]$projection)) {
-      res <- .h5readProjectionResult(benchmark, benchmark$subpipelines[[idx.subpipeline]]$projection$ref, idx.n_param)
-    } else {
-      res <- .h5readProjectionResult(benchmark, idx.subpipeline, idx.n_param)
-    }
+  proj <- benchmark$subpipelines[[idx.subpipeline]]$projection
+  if (!is.null(proj)) {
+    res <- GetProjection(benchmark, idx.subpipeline, idx.n_param)
     if (is.list(res)) return(res$Projection) else return(res)
   } else {
     if (null_if_exprs)

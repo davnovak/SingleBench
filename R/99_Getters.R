@@ -172,7 +172,7 @@ GetSubpipelineName <- function(
 GetProjection <- function(
   benchmark, idx.subpipeline, idx.n_param = NULL
 ) {
-  .h5readProjectionResult(benchmark, idx.subpipeline, idx.n_param)$Projection
+  .h5readProjectionResult(benchmark, idx.subpipeline, idx.n_param)
 }
 
 #' Get \code{Benchmark} 2-dimensional layout of input data
@@ -337,10 +337,15 @@ GetNParameterIterationName_Projection <- function(
 }
 
 GetProjectionModuleCount <- function(benchmark, idx.subpipeline) {
-  if (!is.null(benchmark$subpipelines[[idx.subpipeline]]$projection))
-    benchmark$subpipelines[[idx.subpipeline]]$projection$n_modules
-  else
-    NULL
+  if (!is.null(benchmark$subpipelines[[idx.subpipeline]]$projection)) {
+    proj <- benchmark$subpipelines[[idx.subpipeline]]$projection
+    if (IsClone(proj)) {
+      proj <- benchmark$subpipelines[[proj$ref]]$projection
+    }
+    return(proj$n_modules)
+  } else {
+    return(NULL)
+  }
 }
 
 GetClusteringModuleCount <- function(benchmark, idx.subpipeline) {
@@ -838,14 +843,6 @@ GetClusteringScoringTable <- function(
     vals_by_npar$`Evaluation Metric` <- as.factor(vals_by_npar$`Evaluation Metric`)
     return(vals_by_npar)
   }
-}
-
-GetProjectionReference <- function(
-  benchmark,
-  idx.subpipeline,
-  idx.n_param = NULL
-) {
-  rhdf5::h5read(benchmark$h5_path, .h5_slotname(idx.subpipeline, 'Projection', idx.n_param, suffix = 'IsReferenceTo'))
 }
 
 GetRMSDPerCluster <- function(

@@ -4,15 +4,15 @@
 
 * applying projection (de-noising/dimension-reduction) and clustering to cytometry (and other single-cell) datasets,
 
-* benchmarking performance of these pipelines on various datasets,
+* benchmarking performance,
 
-* optimising parameters to boost performance of automated detection of cell states and cell types.
+* optimising parameters.
 
-Since there is little consensus regarding the best evaluation metrics for clustering quality assessment, `SingleBench` is built to provide a rapid overview of how each user-defined set-up performs on a representative dataset, including which cell populations are better or worse detected by it. Both supervised and unsupervised evaluation of clustering is reported.
+Since there is little consensus regarding the best quality measures for clustering, `SingleBench` gives runs a battery of tests and shows which cell populations are better or worse detected.
 
-`SingleBench` is easy to extend. It includes a toolbox to create wrappers for new projection and clustering algorithms rapidly.
-It makes use of auxialiary `HDF5` files to store intermediate results of evaluation while minimising memory requirements (and preventing loss of data due to interrupted evaluation).
-Repeated runs of clustering algorithms (for stability analysis) can be parallelised
+`SingleBench` is easy to extend with new projection and clustering tools.
+It uses `HDF5` files to store intermediate results while saving memory and preventing loss of data due to interruption.
+Repeated runs of clustering (for stability analysis) can be parallelised.
 
 ## Installation
 
@@ -22,55 +22,55 @@ Install `SingleBench` using the package `devtools` from your `R` console:
 devtools::install_github('davnovak/SingleBench')
 ```
 
-This will install all the dependencies needed to use `SingleBench`.
+This will install required dependencies.
 However, to run individual projection/clustering tools with `SingleBench`, you will need to install them also.
 
 ## Usage
 
-After installation, the `SingleBench` package needs to be loaded.
-This exports method wrappers for projection and clustering tools to the global namespace.
+After installation, the package needs to be loaded.
+This exports projection/clustering method wrappers to the global namespace.
 
 ```
 library(SingleBench)
 ```
 
-A start-up messages will give you a read-out of available projection/clustering tools and potential missing packages.
+A start-up message lists available wrappers and potential missing packages.
 
-The initial step is to set up a benchmark pipeline.
-A single pipeline is made up of subpipelines, which are combinations of tools and their parameters.
+We start by setting up a pipeline: each pipeline is made up of subpipelines, which are combinations of tools and their parameters.
 Each subpipeline can have one or both of two modules: *projection* and *clustering*.
-For instance, a single subpipeline for data smoothing (a simple denoising algorithm), followed by clustering is created using this syntax:
+
+A single subpipeline for data smoothing (a simple denoising algorithm), followed by clustering is created using this syntax:
 
 ```
 subpipelines <- list()
 subpipelines[[1]] <- 
     Subpipeline(
-        projection = Module(Fix('smooth', k = 50), n_param = 'n_iter'),
+        projection = Module(Fix('pSmooth', k = 50, mode = 'Local'), n_param = 'n_iter'),
         clustering = Module(Fix('FlowSOM', grid_width = 10, grid_height = 10), n_param = 'n_clusters')
     )
 ```
  
-Here, `Fix` associates a method with input parameter values.
-This produces a wrapper with parameters, which is then plugged into a `Module`, which *may* specify an *n*-parameter: this is a numeric parameter that is kept variable for executing parameter sweeps over a range of values.
+`Fix` associates a method with input parameter values (`pSmooth` with parameter values of `k` and `mode`).
+We plug this into a `Module`, which *may* specify an *n*-parameter: this is a numeric parameter that is kept variable for executing parameter sweeps over a range of values (`pSmooth` has `n_iter` here, and `FlowSOM` has `n_clusters`).
 
-Both the projection step and the clustering step can chain multiple modules (instead of a single `Module`, use a sequential `list` of modules).
-Either or both the projection step and clustering step may include and *n*-parameter.
-In our example, we can sweep over the iteration-count of our denoising algorithm and target number of clusters in the clustering step:
+Either or both the projection step and the clustering step can chain multiple modules back-to-back (instead of a single `Module`, use a `list` of them).
+Either or both steps may include its *n*-parameter.
+This is how we set up the parameter sweep:
  
 ```
 n_params <- list()
 n_params[[1]] <- list(
     projection = rep(c(NA, 1, 2, 3), times = 2),
-    clustering = rep(c(30, 40), each = 4)
+    clustering = c(30, 40)
 )
 ```
 
-If *n*-parameter values for both projection and for clustering are given, they will be aligned (of one of the vectors is shorter, the same procedure as for aligning vectors in a matrix in `R` is used).
+If *n*-parameter values for both projection and for clustering are given, they will be aligned (like they would be with `cbind`).
  
-Setting an *n*-parameter value of projection to `NA` will result in omitting the projection step in that iteration.
-If an *n*-parameter value is re-used in the projection step, the projection results will get recycled.
+Setting an *n*-parameter value of projection to `NA` will cause omitting the projection step in that iteration.
+If an *n*-parameter value is re-used in the projection step, results get recycled.
  
-To create a second subpipeline that re-uses the projection step (and its results), simply use the same *n*-parameter values in the projection step:
+To create a second subpipeline that uses the same projection step, use `CloneFrom`:
 
 ```
 subpipelines[[2]] <-

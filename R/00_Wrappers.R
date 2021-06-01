@@ -5,7 +5,7 @@ IsProjectionWrapper <- function(x) 'BenchmarkToolWrapper_Reduction' %in% class(x
 IsClusteringWrapper <- function(x) 'BenchmarkToolWrapper_Clustering' %in% class(x)
 IsListOfProjectionWrappers <- function(x) is.list(x) && !IsProjectionWrapper(x) && all(sapply(x, function(xx) is.null(xx) || (is.atomic(xx) && is.na(xx)) || IsProjectionWrapper(xx))) && 'BenchmarkToolWrapper_Projection' %in% unique(unlist(sapply(x, class)))
 IsListOfClusteringWrappers <- function(x) is.list(x) && !IsClusteringWrapper(x) && all(sapply(x, function(xx) is.null(xx) || (is.atomic(xx) && is.na(xx)) || IsClusteringWrapper(xx))) && 'BenchmarkToolWrapper_Clustering' %in% unique(unlist(sapply(x, class)))
-IsClone <- function(x) length(class(x)) == 1 && class(x) == 'Clone'
+IsClone <- function(x) length(class(x)) == 1 && class(x) == 'Clone' || isTRUE(attr(x, 'IsClone'))
 
 #' Tweak format of a \code{k}-nearest-neighbour graph object
 #'

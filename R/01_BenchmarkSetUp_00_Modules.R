@@ -348,6 +348,23 @@ print.Subpipeline <- function(x, ...) {
   }
 }
 
+MergeOverlaps <- function(l) {
+  n <- length(l)
+  if (n < 2)
+    return(l)
+  del <- rep(FALSE, n)
+  for (i in 2:n) {
+    for (j in 1:(i-1)) {
+      if (sum(del[c(i, j)]) == 0 && any(l[[i]] %in% l[[j]])) {
+        l[[i]] <- unique(c(l[[i]], l[[j]]))
+        l[[j]] <- NA
+        del[j] <- TRUE
+      }
+    }
+  }
+  l[!del]
+}
+
 AlignSubpipelines <- function(
   benchmark,
   subpipelines,
@@ -361,18 +378,28 @@ AlignSubpipelines <- function(
       subpipelines <- list(subpipelines)
     benchmark$subpipelines <- subpipelines
     benchmark$n_subpipelines <- length(subpipelines)
+    benchmark$clone_groups <- list()
+    
     if (is.null(n_params))
       n_params <- rep(list(list(projection = c(), clustering = c())), benchmark$n_subpipelines)
+    
     if (!is.null(names(n_params)) && 'projection' %in% names(n_params) || 'clustering' %in% names(n_params))
       n_params <- list(n_params)
+    
     for (idx in seq_along(n_params)) {
-      if (!'projection' %in% names(n_params[[idx]]) && 'clustering' %in% names(n_params[[idx]]))
+      if (!'projection' %in% names(n_params[[idx]]) && 'clustering' %in% names(n_params[[idx]])) {
         n_params[[idx]]$projection <- c()#rep(NA, length(n_params[[idx]]$clustering))
+        if (IsClone(subpipeline[[idx]]$projection)) {
+          n_params[[idx]]$projection <- n_params[[subpipeline[[idx]]$projection$ref]]$projection
+          attr(n_params[[idx]]$projection, 'IsClone') <- TRUE
+        }
+      }
       if (!'clustering' %in% names(n_params[[idx]]) && 'projection' %in% names(n_params[[idx]]))
         n_params[[idx]]$clustering <- c()#rep(NA, length(n_params[[idx]]$projection))
       if (!'clustering' %in% names(n_params[[idx]]) && !'projection' %in% names(n_params[[idx]]))
         n_params[[idx]]$projection <- n_params[[idx]]$clustering <- c()
     }
+    
     for (idx in seq_along(subpipelines)) {
       if (!is.null(subpipelines[[idx]]$projection) && !is.null(subpipelines[[idx]]$projection$which_n_param))
         if (is.null(n_params) || is.null(n_params[[idx]]) || is.null(n_params[[idx]]$projection))
@@ -409,6 +436,25 @@ AlignSubpipelines <- function(
         }
       }
     }
+    
+    for (idx in seq_along(subpipelines)) {
+      proj <- subpipelines[[idx]]$projection
+      idx_clone <- length(benchmark$clone_groups) + 1
+      while (IsClone(proj)) {
+        if (length(benchmark$clone_groups) < idx_clone)
+          benchmark$clone_groups <- c(benchmark$clone_groups, list(c(idx, proj$ref)))
+        else
+          benchmark$clone_groups[[idx_clone]] <- unique(c(benchmark$clone_groups[[idx_clone]], idx, proj$ref))
+        proj <- proj$ref
+      }
+    }
+    benchmark$clone_groups <- MergeOverlaps(benchmark$clone_groups)
+    
+    
+    for (idx in seq_along(subpipelines))
+      proj <- subpipelines[[idx]]$projection
+      if (IsClone(proj))
+        benchmark$clone_groups[[proj$ref]] <- unique(c(benchmark$clone_groups[[proj$ref]], idx, proj$ref))
     
     benchmark$n_params     <- n_params
     

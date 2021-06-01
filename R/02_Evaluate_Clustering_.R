@@ -7,6 +7,7 @@ EvalClustering <- function(
   
   seq_pipelines <- if (is.null(which_subpipelines)) seq_len(benchmark$n_subpipelines) else which_subpipelines
   
+  ## Iterate over subpipelines
   purrr::walk(
     seq_pipelines, function(idx.subpipeline) {
       
@@ -15,79 +16,60 @@ EvalClustering <- function(
       clus <- benchmark$subpipelines[[idx.subpipeline]]$clustering
       if (!is.null(clus)) {
         
-        if (verbose) {
-          .msg('Evaluating subpipeline '); .msg_alt(idx.subpipeline); .msg(' of ' ); .msg_alt(benchmark$n_subpipelines); .msg('\n')
-        }
+        if (verbose) { .msg('Evaluating subpipeline '); .msg_alt(idx.subpipeline); .msg(' of ' ); .msg_alt(benchmark$n_subpipelines); .msg('\n') }
         
-        npar_proj         <- FALSE
-        n_param_values    <- benchmark$n_params[[idx.subpipeline]]$clustering
+        ## Get n-parameter values for this subpipeline (either from the clustering step or the projection step...)
+        n_param_values <- benchmark$n_params[[idx.subpipeline]]$clustering
         if (length(n_param_values) == 0) {
           n_param_values <- benchmark$n_params[[idx.subpipeline]]$projection
-          if (IsClone(benchmark$subpipelines[[idx.subpipeline]]$projection))
-            n_param_values <- benchmark$n_params[[benchmark$subpipelines[[idx.subpipeline]]$projection$ref]]$projection
+          proj <- benchmark$subpipelines[[idx.subpipeline]]$projection
+          idx <- idx.subpipeline
+          while (IsClone(proj)) {
+            idx <- proj$ref
+            proj <- benchmark$subpipelines[[idx]]$projection
+          }
+          n_param_values <- benchmark$n_params[[idx]]$projection
           if (length(n_param_values) > 0)
             npar_proj <- TRUE
         }
-          
-        train             <- fTrain.ModuleChain(clus)
-        extract           <- fExtract.ModuleChain(clus)
-        map               <- fMap.ModuleChain(clus)
-        idcs_training     <- benchmark$clustering.training_set
-        bootstrap_idcs    <- benchmark$bootstrap_indices
         
-        n_iter            <- benchmark$stability.n_iter
-        n_cores           <- benchmark$n_cores
-        parallelise       <- all(purrr::map_lgl(clus$modules, function(x) !x$wrapper_with_parameters$wrapper$prevent_parallel_execution))
+        ## Get model-building functions
+        train <- fTrain.ModuleChain(clus)
+        extract <- fExtract.ModuleChain(clus)
+        map <- fMap.ModuleChain(clus)
+        idcs_training <- benchmark$clustering.training_set
+        bootstrap_idcs <- benchmark$bootstrap_indices
+        
+        n_iter <- benchmark$stability.n_iter
+        n_cores <- benchmark$n_cores
+        parallelise <- all(purrr::map_lgl(clus$modules, function(x) !x$wrapper_with_parameters$wrapper$prevent_parallel_execution))
         
         if (no_parallelisation)
           parallelise <- FALSE
         
+        ## Get expression matrix and k-NNG (if needed)
         exprs <- GetExpressionMatrix(benchmark)
-        knn   <- if (clus$uses_knn_graph) GetkNNMatrix(benchmark) else NULL
+        knn <- if (clus$uses_knn_graph) GetkNNMatrix(benchmark) else NULL
         
-        nparam_range <- seq_along(n_param_values)
+        n_param_range <- seq_along(n_param_values)
         no_npar <- FALSE
-        if (length(nparam_range) == 0) {
-          idx.subpipeline_ref <- GetProjectionReference(benchmark, idx.subpipeline, NULL)
-          if (is.na(idx.subpipeline_ref) || idx.subpipeline_ref < 0)
-            idx.subpipeline_ref <- idx.subpipeline
-          nparam_range <- GetNParameterValues(benchmark, idx.subpipeline_ref)$idx.n_param
+        if (length(n_param_range) == 0) {
           no_npar <- TRUE
-          if (length(nparam_range) == 0)
-            nparam_range <- 1
+          n_param_range <- 1
         }
         
+        ## Iterate over n-parameter values (if n-parameter is specified)
         purrr::walk(
-          nparam_range,
+          n_param_range,
           function(idx.n_param) {
-            
-            idx.subpipeline_ref <- GetProjectionReference(benchmark, idx.subpipeline, NULL)
-            if (is.na(idx.subpipeline_ref) || idx.subpipeline_ref < 0)
-              idx.subpipeline_ref <- idx.subpipeline
-            
-            if (no_npar && !npar_proj) {
-              idx.n_param_ref <- NULL
-            } else {
-              idx.n_param_ref <-
-                if (!is.null(benchmark$n_params[[idx.subpipeline]]$projection))
-                  GetProjectionReference(benchmark, idx.subpipeline_ref, idx.n_param)
-                else
-                  NA
-              if (is.na(idx.n_param_ref) || idx.n_param_ref < 0)
-                idx.n_param_ref <- idx.n_param
-            }
-            
             if (verbose) {
               .msg('\t-> evaluating clustering step: ')
               .msg_alt(GetNParameterIterationName_Clustering(benchmark, idx.subpipeline, idx.n_param))
             }
-            n_param <- if (no_npar) NULL else n_param_values[idx.n_param]
             
-            input <- GetClusteringInput(benchmark, idx.subpipeline_ref, idx.n_param_ref)
+            n_param <- if (no_npar || npar_proj) NULL else n_param_values[idx.n_param]
+            input <- GetClusteringInput(benchmark, idx.subpipeline, idx.n_param = if (no_npar) NULL else idx.n_param)
             this_exprs <- if (clus$uses_original_expression_matrix) exprs else NULL
-            
-            if (npar_proj)
-              n_param <- NULL
             
             res <-
               if (benchmark$stability == 'single')
@@ -136,7 +118,7 @@ EvalClustering <- function(
               
           }
         )
-      }
+      } # endif !is.null(clus)
     }
   )
   

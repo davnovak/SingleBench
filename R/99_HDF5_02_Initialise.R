@@ -11,7 +11,8 @@ HDF5_CreateHDF5AndWriteInputs <- function(
   rhdf5::h5createGroup(file = benchmark$h5_path, group = 'Input')
   suppressMessages(.h5write(obj = benchmark$exprs, file = benchmark$h5_path, name = 'Input/ExpressionMatrix'))
   rhdf5::h5createGroup(file = benchmark$h5_path, group = 'Input/Layout')
-  .h5write(obj = -1, file = benchmark$h5_path, name = 'Input/Layout/IsReferenceTo')
+  .h5write(obj = -1, file = benchmark$h5_path, name = 'Input/Layout/IsReferenceToSubpipeline')
+  .h5write(obj = -1, file = benchmark$h5_path, name = 'Input/Layout/IsReferenceToNParamIteration')
   .h5write(obj = benchmark$column_names, file = benchmark$h5_path, name = 'Input/ColumnNames')
   .h5writeFactorVectorOrListOfThem(obj = benchmark$annotation, file = benchmark$h5_path, name = 'Input/Annotation')
   .h5write(obj = benchmark$row_count, file = benchmark$h5_path, name = 'Input/RowCount')
@@ -22,74 +23,181 @@ HDF5_CreateHDF5AndWriteInputs <- function(
 HDF5_InitialiseEvaluationResults <- function(
   benchmark
 ) {
-  slotname <- .h5_slotname() # 'EvaluationResults
+  slotname <- .h5_slotname() # 'EvaluationResults'
   
+  ## If evaluation results from some previous unsuccesstul run are present, this will delete them first and create a new 'EvaluationResults' group
   g <- as.list(rhdf5::h5ls(benchmark$h5_path))$group
   g <- g[-grep('^/Input', g)]
   if (slotname %in% g)
     rhdf5::h5delete(benchmark$h5_path, slotname)
-  
   rhdf5::h5createGroup(file = benchmark$h5_path, group = slotname)
+  
+  ## Save stability setting and random seeds
   .h5write(obj = benchmark$stability, file = benchmark$h5_path, name = .h5_slotname(suffix = 'Stability'))
   .h5write(obj = benchmark$seed.dimred, file = benchmark$h5_path, name = .h5_slotname(suffix = 'RandomSeed_Projection'))
   .h5write(obj = benchmark$seed.cluster, file = benchmark$h5_path, name = .h5_slotname(suffix = 'RandomSeed_Clustering'))
+  
+  ## Iterate over subpipelines
   purrr::walk(
     seq_len(benchmark$n_subpipelines),
     function(idx.subpipeline) {
+      ## Create a slot for the subpipeline and a 'Projection' and 'Clustering' slot therein
       rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline))
-      .h5write(obj = GetSubpipelineName(benchmark, idx.subpipeline), file = benchmark$h5_path, name = 'Name')
+      .h5write(obj = GetSubpipelineName(benchmark, idx.subpipeline), file = benchmark$h5_path, name = 'Name') # note down name of subpipeline
       rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Projection'))
       rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Clustering'))
       
+      ## Extract the projection WrapperWithParameters object
       proj <- benchmark$subpipelines[[idx.subpipeline]]$projection
-      if (!is.null(proj) && !IsClone(proj)) {
+      if (!is.null(proj)) {
+        
+        ## Iterate over the n-parameter values if specified
+        no_npar <- FALSE
+        n_param_range <- seq_len(GetNParameterIterationsCount(benchmark, idx.subpipeline))
+        if (length(n_param_range) == 0) {
+          n_param_range <- 1
+          no_npar <- TRUE
+        }
+        
         purrr::walk(
-          seq_len(GetNParameterIterationsCount(benchmark, idx.subpipeline)),
+          n_param_range,
           function(idx.n_param) {
-            rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Projection', idx.n_param = idx.n_param))
+            
+            if (no_npar)
+              idx.n_param <- NULL
+            
+            ## Create a 'Projection' group for every n-parameter iteration
+            rhdf5::h5createGroup(
+              file = benchmark$h5_path,
+              group = .h5_slotname(
+                idx.subpipeline = idx.subpipeline,
+                tool_type = 'Projection',
+                idx.n_param = idx.n_param
+              )
+            )
+            
+            ## If multiple modules are chained within the projection step, create a group to store results for each module
             n_modules_proj <- GetProjectionModuleCount(benchmark, idx.subpipeline)
             if (!is.null(n_modules_proj)) {
               purrr::walk(
                 seq_len(n_modules_proj - 1),
                 function(idx.module)
-                  rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Projection', idx.n_param = idx.n_param, idx.module = idx.module))
+                  rhdf5::h5createGroup(
+                    file = benchmark$h5_path,
+                    group = .h5_slotname(
+                      idx.subpipeline = idx.subpipeline,
+                      tool_type = 'Projection',
+                      idx.n_param = idx.n_param,
+                      idx.module = idx.module
+                    )
+                  )
               )
-              rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Projection', idx.n_param = idx.n_param, suffix = 'Result'))
-              rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Projection', idx.n_param = idx.n_param, suffix = 'Scores'))
-              .h5write(obj = -1, file = benchmark$h5_path, name = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Projection', suffix = 'IsReferenceTo'))
+              ## Create slots to groups to store results, scores and (potential) reference pointers (for recycling results)
+              rhdf5::h5createGroup(
+                file = benchmark$h5_path,
+                group = .h5_slotname(
+                  idx.subpipeline = idx.subpipeline,
+                  tool_type = 'Projection',
+                  idx.n_param = idx.n_param,
+                  suffix = 'Result'
+                )
+              )
+              rhdf5::h5createGroup(
+                file = benchmark$h5_path,
+                group = .h5_slotname(
+                  idx.subpipeline = idx.subpipeline,
+                  tool_type = 'Projection',
+                  idx.n_param = idx.n_param,
+                  suffix = 'Scores'
+                )
+              )
+              if (!no_npar) {
+                ## By default, reference index is set to -1 (~ no reference)
+                .h5write(
+                  obj = -1,
+                  file = benchmark$h5_path,
+                  name = .h5_slotname(
+                    idx.subpipeline = idx.subpipeline,
+                    tool_type = 'Projection',
+                    idx.n_param = idx.n_param,
+                    suffix = 'IsReferenceToSubpipeline'
+                  )
+                )
+                .h5write(
+                  obj = -1,
+                  file = benchmark$h5_path,
+                  name = .h5_slotname(
+                    idx.subpipeline = idx.subpipeline,
+                    tool_type = 'Projection',
+                    idx.n_param = idx.n_param,
+                    suffix = 'IsReferenceToNParamIteration'
+                  )
+                )
+              }
             }
-            ref_val <- -1
-            npar_val <- benchmark$n_params[[idx.subpipeline]]$projection[idx.n_param]
-            if (idx.n_param %in% which(duplicated(benchmark$n_params[[idx.subpipeline]]$projection))) {
-              ref_val <- which(benchmark$n_params[[idx.subpipeline]]$projection == npar_val)[1]
-            }
-            
-            .h5write(obj = ref_val, file = benchmark$h5_path, name = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Projection', idx.n_param = idx.n_param, suffix = 'IsReferenceTo'))
           })
-      } else {
-        .h5write(obj = proj$ref, file = benchmark$h5_path, name = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Projection', suffix = 'IsReferenceTo'))
+        .h5write(
+          obj = if (IsClone(proj)) proj$ref else -1,
+          file = benchmark$h5_path,
+          name = .h5_slotname(
+            idx.subpipeline = idx.subpipeline,
+            tool_type = 'Projection',
+            suffix = 'IsReferenceToSubpipeline'
+          )
+        )
       }
       
-      nparam_range <- seq_len(GetNParameterIterationsCount(benchmark, idx.subpipeline))
-      if (IsClone(proj)) {
-        nparam_range <- seq_len(GetNParameterIterationsCount(benchmark, proj$ref))
-      }
-      
-      purrr::walk(
-        nparam_range,
-        function(idx.n_param) {
-          rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Clustering', idx.n_param = idx.n_param))
-          n_modules_clus <- GetClusteringModuleCount(benchmark, idx.subpipeline)
-          if (!is.null(n_modules_clus)) {
-            purrr::walk(
-              seq_len(n_modules_clus - 1),
-              function(idx.module)
-                rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Clustering', idx.n_param = idx.n_param, idx.module = idx.module))
+      ## Extract the clustering WrapperWithParameters object
+      clus <- benchmark$subpipelines[[idx.subpipeline]]$clustering
+      if (!is.null(clus)) {
+        
+        ## Iterate over the n-parameter values if specified
+        no_npar <- FALSE
+        n_param_range <- seq_len(GetNParameterIterationsCount(benchmark, idx.subpipeline))
+        if (length(n_param_range) == 0) {
+          n_param_range <- 1
+          no_npar <- TRUE
+        }
+        
+        purrr::walk(
+          n_param_range,
+          function(idx.n_param) {
+            
+            if (no_npar)
+              idx.n_param <- NULL
+            
+            ## Create a 'Clustering' group for every n-parameter iteration
+            rhdf5::h5createGroup(
+              file = benchmark$h5_path,
+              group = .h5_slotname(
+                idx.subpipeline = idx.subpipeline,
+                tool_type = 'Clustering',
+                idx.n_param = idx.n_param
+              )
             )
-            rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Clustering', idx.n_param = idx.n_param, suffix = 'Result'))
-            rhdf5::h5createGroup(file = benchmark$h5_path, group = .h5_slotname(idx.subpipeline = idx.subpipeline, tool_type = 'Clustering', idx.n_param = idx.n_param, suffix = 'Scores'))
+            
+            ## Create slots to groups to store results, scores and (potential) reference pointers (for recycling results)
+            rhdf5::h5createGroup(
+              file = benchmark$h5_path,
+              group = .h5_slotname(
+                idx.subpipeline = idx.subpipeline,
+                tool_type = 'Clustering',
+                idx.n_param = idx.n_param,
+                suffix = 'Result'
+              )
+            )
+            rhdf5::h5createGroup(
+              file = benchmark$h5_path,
+              group = .h5_slotname(
+                idx.subpipeline = idx.subpipeline,
+                tool_type = 'Clustering',
+                idx.n_param = idx.n_param,
+                suffix = 'Scores'
+              )
+            )
           }
-          
-      })
-  })
+        )
+      }
+  }) # subpipeline iterations
+  invisible(benchmark)
 }
