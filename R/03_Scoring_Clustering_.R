@@ -1,12 +1,16 @@
 
 ScoreClustering <- function(
-  exprs, annotation, result, stability, bootstrap_idcs, unassigned_labels
+  exprs, annotation, result, stability, bootstrap_idcs, unassigned_labels, column_names
 ) {
   
   if (is.list(exprs))
     exprs <- do.call(rbind, exprs)
+  colnames(exprs) <- column_names
   
   idcs_assigned <- which(!annotation %in% unassigned_labels)
+  
+  if (is.list(result$ClusteringVector))
+    result$ClusteringVector <- do.call(c, result$ClusteringVector)
   
   if (stability == 'single') {
     ## Unsupervised evaluation metrics

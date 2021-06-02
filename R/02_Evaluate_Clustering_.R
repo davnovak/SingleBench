@@ -96,7 +96,7 @@ EvalClustering <- function(
             
             if (verbose)
               .msg('\t\t-> computing scores...')
-            scores <- ScoreClustering(exprs, GetAnnotation(benchmark, concatenate = TRUE), res, benchmark$stability, bootstrap_idcs, benchmark$unassigned_labels)
+            scores <- ScoreClustering(exprs, GetAnnotation(benchmark, concatenate = TRUE), res, benchmark$stability, bootstrap_idcs, benchmark$unassigned_labels, column_names = benchmark$column_names)
             if (verbose)
               .msg(' writing scores...')
             .h5writeClusteringScoring(scores, benchmark, idx.subpipeline, idx.n_param)
@@ -105,7 +105,7 @@ EvalClustering <- function(
             
             ## Compute cluster medians
             
-            e <- if (is.list(exprs)) do.call(rbind, exprs) else exprs
+            exprs <- GetExpressionMatrix(benchmark, concatenate = TRUE)
             codes <- GetClustering(benchmark, idx.subpipeline, idx.n_param)
             codes <- as.factor(codes)
             

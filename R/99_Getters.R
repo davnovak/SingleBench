@@ -75,7 +75,8 @@ GetExpressionMatrix <- function(
   obj <- .h5read(benchmark$h5_path, 'Input/ExpressionMatrix')
   if (is.list(obj)) {
     cn <- .h5read(benchmark$h5_path, 'Input/ColumnNames')
-    purrr::walk(seq_len(obj), function(idx) colnames(obj[[idx]]) <- cn)
+    for (idx in seq_along(obj))
+      colnames(obj[[idx]]) <- cn
   } else {
     colnames(obj) <- .h5read(benchmark$h5_path, 'Input/ColumnNames')
   }
@@ -280,7 +281,7 @@ GetClusteringInput <- function(
 #'
 #' @export
 GetClustering <- function(
-  benchmark, idx.subpipeline, idx.n_param = NULL, all_runs = FALSE
+  benchmark, idx.subpipeline, idx.n_param = NULL, all_runs = FALSE, concatenate = TRUE
 ) {
   obj <- .h5readClusteringResult(benchmark, idx.subpipeline, idx.n_param)$ClusteringVector
   if (!all_runs) {
@@ -289,6 +290,8 @@ GetClustering <- function(
     else if (benchmark$stability == 'bootstrap')
       obj <- obj[[length(obj)]]
   }
+  if (concatenate && is.list(obj))
+    obj <- do.call(c, obj)
   obj
 }
 
@@ -882,7 +885,7 @@ GetLabelClusterMatching <- function(
   }
   if (ncol(bij) == 2) {
     bij <- data.frame(bij); colnames(bij) <- c('Population', 'Cluster')
-    fc <- data.frame(fc); colnames(fc) <- c('Population', 'Cluster')
+    fc <- data.frame(fc); colnames(fc) <- c('Cluster', 'Population')
     fl <- data.frame(fl); colnames(fl) <- c('Population', 'Cluster')
   }
   list(
@@ -907,10 +910,11 @@ GetRMSDPerPopulation <- function(
     matching <- matching$Bijective
   } else if (match_type == 'fixed_cluster') {
     matching <- matching$`Fixed Cluster`
+    colnames(matching) <- c('Cluster', 'Population')
   } else if (match_type == 'fixed_label') {
     matching <- matching$`Fixed Label`
   } else if (match_type == 'real') {
-    annot <- GetAnnotation(b)
+    annot <- GetAnnotation(b, concatenate = TRUE)
     res <- rmsd_per_cluster(GetExpressionMatrix(b), annot)
     names(res) <- levels(annot)
     if (!is.null(benchmark$unassigned_labels)) {
@@ -1026,6 +1030,7 @@ GetMatchedClusterSizes <- function(
     matching <- matching$Bijective
   } else if (match_type == 'fixed_cluster') {
     matching <- matching$`Fixed Cluster`
+    colnames(matching) <- c('Cluster', 'Population')
   } else if (match_type == 'fixed_label') {
     matching <- matching$`Fixed Label`
   }

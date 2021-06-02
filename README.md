@@ -1,6 +1,7 @@
 <img src="logo.png" alt="SingleBench" width="350"/>
 
-`SingleBench` is an `R` framework and API for
+This is a pre-release of `SingleBench`.
+It is an `R` framework and API for
 
 * applying projection (de-noising/dimension-reduction) and clustering to cytometry (and other single-cell) datasets,
 
@@ -53,24 +54,24 @@ subpipelines[[1]] <-
 `Fix` associates a method with input parameter values (`pSmooth` with parameter values of `k` and `mode`).
 We plug this into a `Module`, which *may* specify an *n*-parameter: this is a numeric parameter that is kept variable for executing parameter sweeps over a range of values (`pSmooth` has `n_iter` here, and `FlowSOM` has `n_clusters`).
 
-Either or both the projection step and the clustering step can chain multiple modules back-to-back (instead of a single `Module`, use a `list` of them).
-Either or both steps may include its *n*-parameter.
-This is how we set up the parameter sweep:
+Since we might want to transform our data in multiple steps to make it more amenable to clustering, the projection can chain multiple modules back-to-back (instead of a single `Module`, use a `list` of them).
+
+This is how we set up the range of *n*-parameter values for both of our modules:
  
 ```
 n_params <- list()
 n_params[[1]] <- list(
-    projection = rep(c(NA, 1, 2, 3), times = 2),
+    projection = rep(c(NA, 1, 2, 3), each = 2),
     clustering = c(30, 40)
 )
 ```
 
-If *n*-parameter values for both projection and for clustering are given, they will be aligned (like they would be with `cbind`).
+If *n*-parameter values for both projection and for clustering are given, they will be aligned (like any two vectors would be with `cbind`).
  
 Setting an *n*-parameter value of projection to `NA` will cause omitting the projection step in that iteration.
 If an *n*-parameter value is re-used in the projection step, results get recycled.
  
-To create a second subpipeline that uses the same projection step, use `CloneFrom`:
+To create a second subpipeline that uses the same projection method, use `CloneFrom`:
 
 ```
 subpipelines[[2]] <-
@@ -85,11 +86,13 @@ n_params[[2]] <- list(
 )
 ```
 
+If any projection result is needed multiple times (the same projection module and, if *n*-parameter is specified, the same *n*-parameter value is set), it is only produced once and recycled later.
+
 Finally, we can construct a `Benchmark` object with these settings.
 For demonstration, we use the package `HDCytoData` to retrieve a cytometry dataset as a `SummarizedExperiment` object for use in our benchmark.
 We will only want to keep *type* markers and use an *asinh* (cofactor = 5) transformation.
-We also specify that there exists a label for unannotated cells ('*unassigned*'), which needs to be handled differently when calculating supervised evaluation metrics.
-For evaluating stability of results, we will run each clustering step 5 times.
+We also specify that there exists a label for unannotated cells ('*unassigned*').
+To evaluate stability, we will run each clustering step 5 times.
 
 ```
 library(HDCytoData)
@@ -106,7 +109,7 @@ b <- Benchmark(
 )
 ```
 
-This will set up our pipeline, load input data and create an auxiliary HDF5 file to store any large chunks of data.
+This will set up our pipeline, load input data and create an auxiliary HDF5 to store all intermediate products of evaluation.
 
 The next step is to check if the pipeline set-up is correct and evaluate (run) our benchmark pipeline. 
 
@@ -116,7 +119,8 @@ Evaluate(b)
 ```
 
 As the benchmark pipeline is being evaluated, you will get progress messages.
-By default, unsupervised and supervised evaluation scores for the clustering step 
+By default, unsupervised and supervised evaluation scores are computed for the clustering step.
+By setting `score_projections = TRUE` in `Benchmark`, the projection step is scored as a dimension reduction step (measuring structure preservation in the lower-dimensional embedding).
 
 Optionally, you can generate a 2-dimensional layout of your data for visualisation purposes.
 

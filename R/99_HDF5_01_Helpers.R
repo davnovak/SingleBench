@@ -56,7 +56,6 @@
     rhdf5::h5write(length(obj), file, paste0(name, '/NSamples'))
     for (idx_input in 1:length(obj)) {
       input_group_name <- paste0(name, '/Sample', formatC(idx_input, width = 4, flag = '0'))
-      rhdf5::h5createGroup(file, input_group_name)
       .h5writeFactorVectorOrListOfThem(obj[[idx_input]], file, input_group_name)
     }
   }
@@ -72,7 +71,7 @@
   } else {
       obj <- purrr::map(1:nsamp, function(idx_input) .h5readFactorVectorOrListOfThem(file, paste0(name, '/Sample', formatC(idx_input, width = 4, flag = '0'))))
       if (concatenate)
-        obj <- do.call(c, obj)
+        obj <- as.factor(do.call(c, purrr::map(obj, as.character)))
   }
   obj
 }

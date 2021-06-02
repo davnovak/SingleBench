@@ -6,13 +6,13 @@ SeparateIntoSamples <- function(
     if (length(benchmark$row_count) == 1)
       return(obj)
     ranges <- dplyr::tibble(
-      From = c(1, benchmark$row_count + 1),
-      To = c(benchmark$row_count, sum(benchmark$row_count))
+      From = c(1, benchmark$row_count + 1)[1:length(benchmark$row_count)],
+      To = cumsum(benchmark$row_count)
     )
     if (is.matrix(obj))
       return(purrr::map2(ranges$From, ranges$To, function(from, to) obj[from:to, ]))  
     else if (is.vector(obj))
-      return(purrr::map(ranges$From, ranges$To, function(from, to) obj[from:to]))
+      return(purrr::map2(ranges$From, ranges$To, function(from, to) obj[from:to]))
     
   } else if (benchmark$stability == 'repeat') {
     if (is.list(obj))
@@ -63,6 +63,9 @@ GatherInput <- function(
   else if (input_class == 'SummarizedExperiment')
     GatherInput_SummarizedExperiment(benchmark, input, input_class, input_features, compensation_matrix, transform, transform_features, transform_cofactor, input_labels, input_marker_types, batch_id, remove_labels, verbose)
   benchmark$column_names    <- colnames(if (is.list(benchmark$exprs)) benchmark$exprs[[1]] else benchmark$exprs)
+  cn_na <- is.na(benchmark$column_names)
+  if (any(cn_na))
+    benchmark$column_names[cn_na] <- paste0('Unititled', seq_len(sum(cn_na)))
   benchmark$row_count       <- if (is.list(benchmark$exprs)) sapply(benchmark$exprs, nrow) else nrow(benchmark$exprs)
   benchmark$column_count    <- if (is.list(benchmark$exprs)) ncol(benchmark$exprs[[1]]) else ncol(benchmark$exprs)
   benchmark$n_input_samples <- if (is.list(benchmark$exprs)) length(benchmark$exprs) else 1
@@ -216,25 +219,48 @@ GatherInput_flowSet <- function(
   if (!is.null(compensation_matrix)) {
     if (verbose) .msg('-> applying compensation\n')
     data <- lapply(data, function(x) flowCore::compensate(x, compensation_matrix))
-    if (!is.null(transform)) {
-      if (verbose) {
-        .msg('-> applying '); .msg_alt(transform); .msg(' transformation')
-        if (!is.null(transform_cofactor)) { .msg(' (cofactor = '); .msg_alt(transform_cofactor); .msg(')') };  .msg('\n')
-      }
-      if (transform == 'asinh')
-        for (idx_frame in seq_along(data)) data[[idx_frame]]@exprs[, transform_features] <- asinh(data[[idx_frame]]@exprs[, transform_features] / transform_cofactor)
-      else if (transform == 'estimateLogicle')
-        for (idx_frame in seq_along(data)) data[[idx_frame]] <- flowCore::transform(data[[idx_frame]], flowCore::estimateLogicle(data[[idx_frame]], transform_features))
-    }
   }
-  if (is.null(input_features)) input_features <- seq_len(ncol(data[[1]]))
+  if (is.null(input_features))
+    input_features <- seq_len(ncol(data[[1]]))
+  
   benchmark$exprs <- lapply(data, function(x) {
     out <- x@exprs
-    colnames(out) <- flowCore::markernames(x)
+    
+    cn <- colnames(out)
+    mn <- flowCore::markernames(x)
+    cn[cn %in% names(mn)] <- mn[cn %in% names(mn)]
+    
+    colnames(out) <- cn
     benchmark$markers <- colnames(out)
-    x@exprs[, input_features]
+    out <- out[, input_features]
+    
+    if (!is.null(transform)) {
+      if (verbose) {
+        .msg('-> applying '); .msg_alt(transform); .msg(' transformation to flowFrame')
+        if (!is.null(transform_cofactor)) { .msg(' (cofactor = '); .msg_alt(transform_cofactor); .msg(')') };  .msg('\n')
+      }
+      if (transform == 'asinh') {
+        out[, transform_features] <- asinh(out[, transform_features] / transform_cofactor)
+      }
+      
+      else if (transform == 'estimateLogicle')
+        out <- flowCore::transform(x, flowCore::estimateLogicle(x, transform_features))
+    }
+    out
   })
   rm(data)
+  
+  ## Get relative transform and k-NN feature indices
+  if (!is.null(benchmark$rel_idcs.transform_features))
+    benchmark$rel_idcs.transform_features <- sapply(benchmark$rel_idcs.transform_features, function(x) which(input_features == x))
+  if (!is.null(benchmark$rel_idcs.knn_features))
+    benchmark$rel_idcs.knn_features <- sapply(benchmark$rel_idcs.knn_features, function(x) which(input_features == x))
+  else
+    benchmark$rel_idcs.knn_features <- benchmark$rel_idcs.transform_features
+  
+  if (!is.null(compensation_matrix) || (!is.null(transform) && transform == 'estimateLogicle'))
+    benchmark$exprs <- ff@exprs
+  
   
   ## Get relative transform and k-NN feature indices
   if (!is.null(benchmark$rel_idcs.transform_features))
