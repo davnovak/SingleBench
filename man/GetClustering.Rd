@@ -4,7 +4,13 @@
 \alias{GetClustering}
 \title{Get \code{Benchmark} clustering result}
 \usage{
-GetClustering(benchmark, idx.subpipeline, idx.n_param = NULL, all_runs = FALSE)
+GetClustering(
+  benchmark,
+  idx.subpipeline,
+  idx.n_param = NULL,
+  all_runs = FALSE,
+  concatenate = TRUE
+)
 }
 \arguments{
 \item{benchmark}{object of type \code{Benchmark}}

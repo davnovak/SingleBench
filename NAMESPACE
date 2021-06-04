@@ -83,7 +83,9 @@ export("GetLabelClusterMatching")
 export("GetPopulationSizes")
 export("GetClusterSizes")
 export("GetMatchedClusterSizes")
+export("GetChannelsAndMarkers")
 export("PlotRMSDToSize")
+export("ScoreAnnotation")
 
 export("Jacc")
 

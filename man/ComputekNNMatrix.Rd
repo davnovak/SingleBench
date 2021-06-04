@@ -28,6 +28,9 @@ list with two slots: \code{Indices} contains a matrix of nearest neighbours to e
 Finds \code{k} closest neighbours to each point in high-dimensional space and the distances to these points.
 You can choose from various exact or approximate algorithms to use: \code{annoy}, \code{kd_tree}, \code{cover_tree}, \code{CR} and \code{brute}.
 }
+\references{
+The code for \code{annoy} is adopted from \code{ivis}: \emph{Szubert, B., Cole, J.E., Monaco, C. et al. Structure-preserving visualisation of high dimensional single-cell datasets. Sci Rep 9, 8914 (2019). https://doi.org/10.1038/s41598-019-45301-0}
+}
 \seealso{
 \itemize{
 \item \strong{\code{Denoise}}: denoises high-dimensional expression data to drive down unwanted technical variation

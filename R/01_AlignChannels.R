@@ -1,7 +1,17 @@
 
+#' Extract channel and marker names from a collection of FCS files
+#'
+#' For a collection of FCS files from one experiment (same panel), this function extracts names of channels and markers associated with them, as well as identifying possible mismatches or unmatched parameters that are not present in all files.
+#'
+#' @param fcs_paths string vector: paths to FCS files
+#' @param verbose logical value: whether progress messages should be printed during execution
+#'
+#' @returns list with slots \code{markers}, \code{channels}, \code{pairs} (string representation of how markers and channels are matched) and \code{idcs.mismatches} (which parameters are mismatched across the different files).
+#'
+#' @export
 GetChannelsAndMarkers <- function(
   fcs_paths,
-  verbose
+  verbose = TRUE
 ) {
   channels <- list()
   markers  <- list()

@@ -57,7 +57,7 @@ PlotLabelsOverlay <- function(
 
 #' Create a clusters-overlay plot
 #'
-#' Creates a plot showing separation of automatically generated clusters using previously generated 2-dimensional layout of input expression data.
+#' Creates a plot showing separation of generated clusters using previously generated 2-dimensional layout of input expression data.
 #' For large numbers of data points, this function uses raster graphics to visualise the layout faster.
 #' 
 #' You need to specify a single sub-pipeline and one or more *n*-parameter iteration by index.

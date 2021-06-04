@@ -28,6 +28,10 @@ PlotCoRanking <- function(
 }
 
 PlotFullCorankingMatrix <- function(Q, k) {
+  
+  ## Full (non-truncated) co-ranking matrix (joint histogram of rank
+  ## errors for a lower-dimensional projection of data, versus original)
+  
   line_val <- max(Q) + 10
   dQ <- rbind(Q[1:k, ], line_val, Q[(k+1):nrow(Q), ])
   dQ <- cbind(dQ[, 1:k], line_val, dQ[, (k+1):nrow(Q)])
@@ -36,6 +40,11 @@ PlotFullCorankingMatrix <- function(Q, k) {
 }
 
 PlotCollapsedCorankingMatrix <- function(cQ, log = TRUE) {
+  
+  ## Truncated (collapsed) co-ranking matrix (joint histogram of rank errors
+  ## for a lower-dimensional projection of data, versus original). This version
+  ## does not quantify the size of hard-k intrusions and extrusions
+  
   n <- nrow(cQ)
   extruders <- data.frame(cQ[, n][-n])
   intruders <- data.frame(cQ[n, ][-n])

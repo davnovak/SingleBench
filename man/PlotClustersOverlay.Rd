@@ -27,7 +27,7 @@ PlotClustersOverlay(
 \item{plot_title}{string: title of the plot. Default value is '\emph{Clustering}'}
 }
 \description{
-Creates a plot showing separation of automatically generated clusters using previously generated 2-dimensional layout of input expression data.
+Creates a plot showing separation of generated clusters using previously generated 2-dimensional layout of input expression data.
 For large numbers of data points, this function uses raster graphics to visualise the layout faster.
 }
 \details{

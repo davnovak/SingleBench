@@ -167,3 +167,21 @@ To see all functions exported from `SingleBench`, navigate to tab *Packages* in 
 
 Projection and clustering tools are specified in the benchmark set-up by **wrappers**. These are functions with a prescribed signature that allow `SingleBench` to interact with your tools of interest. They are loaded into your global namespace when you load `SingleBench`. The recipes for wrappers themselves are `R` scripts located in `inst/extdata/wrappers_projection` and `inst/extdata/wrappers_clustering`. To generate a wrapper, use the function `WrapTool`. You will find everything you need to know about writing a new wrapper in the documentation for `WrapTool`. You can also look through existing wrappers for inspiration.
 
+## References & acknowledgements
+
+The approximate implementation of *k*-nearest-neighbour graph building using the annoy algorithm is adopted from the *ivis* dimension-reduction tool.
+
+*Szubert, B., Cole, J.E., Monaco, C. et al. Structure-preserving visualisation of high dimensional single-cell datasets. Sci Rep 9, 8914 (2019). https://doi.org/10.1038/s41598-019-45301-0*
+
+The bijective matching of clusters and populations is based on this 2016 clustering benchmark:
+
+*Weber, L.M. and Robinson, M.D. (2016), Comparison of clustering methods for high-dimensional single-cell flow and mass cytometry data. Cytometry, 89: 1084-1096. https://doi.org/10.1002/cyto.a.23030*
+
+## Future plans
+
+I am working on extending and describing various de-noising techniques for cytometry data and on using variational autoencoders (and useful priors) for creating more clustering-amenable projections of high-dimensional data and producing semi-synthetic data.
+
+Sampling parameters and sorting results using a multi-perspective assessment via Pareto-efficiency could be implemented into `SingleBench` also; from:
+
+*Putri GH, Koprinska I, Ashhurst TM, King NJC, Read MN. Using single-cell cytometry to illustrate integrated multi-perspective evaluation of clustering algorithms using Pareto fronts. Bioinformatics. 2021 Jan 28:btab038. doi: 10.1093/bioinformatics/btab038.*
+

@@ -10,5 +10,5 @@ CloneFrom(idx_subpipeline)
 \item{idx_subpipeline}{integer: index of subpipeline from which to clone the projection result}
 }
 \description{
-If the result of a projection step is shared among multiple subpipelines, only specify it once and use this cloning function to refer to the first instance.
+If the set-up of a projection step is shared among multiple subpipelines, only specify it once and use this cloning function to refer to the first instance.
 }

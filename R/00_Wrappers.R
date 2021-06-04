@@ -9,8 +9,8 @@ IsClone <- function(x) length(class(x)) == 1 && class(x) == 'Clone' || isTRUE(at
 
 #' Tweak format of a \code{k}-nearest-neighbour graph object
 #'
-#' Makes changes to a \code{k}-nearest-neighbour graph object produced by \code{SingleBench} to change it toa format required by some particular tool.
-#' You will typically want to use this inside \code{WrapTool} to change the format of a pre-computed \code{knn} object for use with a dimension-reduction or clustering tool (to avoid re-computing the \code{k}-NN graph if not necessary).
+#' Changes format of a \code{k}-nearest-neighbour graph (\code{k}-NNG) object produced by \code{SingleBench}.
+#' You will typically want to use this inside \code{WrapTool} to change the format of a pre-computed \code{k}-NNG object for use with a projection or clustering tool.
 #' To only keep the \code{Indices} slot of \code{knn} (only keeping a single matrix instead of a list of two matrices), set parameter \code{only_indices} to \code{TRUE}.
 #' To modify the \code{Indices} slot of \code{knn} to use zero-indexing, set parameter \code{zero_index} to \code{TRUE}.
 #' To include the zero-th neighbour (self) for each point in \code{knn}, set parameter \code{zeroth_neighbour} to \code{TRUE}.
@@ -48,6 +48,7 @@ kNNGTweak <- function(
 #' Load projection and clustering tool wrappers
 #'
 #' (Re-)loads wrappers defined in \code{inst/extdata/wrappers_projection} and \code{inst/extdata/wrappers_clustering} in the \code{SingleBench} package directory.
+#' This can be used if you changed any of them or you removed the wrapper functions from your global namespace.
 #'
 #' @export
 LoadWrappers <- function() {
@@ -57,30 +58,31 @@ LoadWrappers <- function() {
 #' Generate a projection or clustering tool wrapper
 #'
 #' This function lets you create wrappers of projection or clustering tools.
-#' Those wrappers can then be passed to the \code{Benchmark} constructor when constructing you benchmark pipeline.
+#' Then, you can include them in benchmark pipelines.
 #' 
 #' # Basic components of a tool wrapper
 #' 
-#' To create a wrapper, you need to specify a handful of different components (arguments to \code{WrapTool}).
-#' \code{name} serves as a unique identifier of the tool.
+#' To create a wrapper, you need to specify a handful of components (as arguments to \code{WrapTool}).
+#' \code{name} is a unique string identifier. This is also included in the name of the wrapper (for example, \code{FlowSOM} will have \code{wrapper.clustering.FlowSOM}).
 #' \code{type} specifies whether it is a projection tool (for dimension reduction or denoising) or clustering tool.
-#' The string vector \code{r_packages} specifies names of required \code{R} packages and \code{python_modules} specifies names of required \code{Python} modules (loadable via \code{reticulate}).
+#' The string vector \code{r_packages} specifies names all required \code{R} packages and \code{python_modules} specifies names of required \code{Python} modules (that will be accessed via \code{reticulate}: the \code{R}/\code{Python} interface).
 #' 
 #' # Modelling functions
 #' 
-#' Any tool wrapper contains 5 modelling functions, which specify how the underlying method is deployed to transform input data.
-#' At least one of them (\code{fun.build_model}) needs to be specified in \code{WrapTool} to generate a valid wrapper.
+#' Modelling functions are the ones that do the work: transform input data.
+#' At least one of them (\code{fun.build_model}) needs to be specified.
 #' 
-#' \code{fun.build_model.single_input} processes a single coordinate matrix of data and returns a model object (an object from which the desired result--projection coordinate matrix or vector of cluster indices per data point--can be extracted).
-#' \code{fun.build_model.batch_input}, instead, takes a list of multiple coordinate matrices (one per sample) as input.
+#' \code{fun.build_model.single_input} takes a single coordinate matrix of data and returns a model.
+#' The model is an object from which the desired result (projection coordinate matrix or vector of cluster indices per data point) can be extracted.
+#' \code{fun.build_model.batch_input}, instead, takes a list of multiple coordinate matrices (one per sample) as input and returns a model.
 #'
-#' If the tool does not distinguish between a single input matrix and multiple input matrices (it would just concatenate the inputs and apply \code{fun.build_model.single_input}), \code{fun.build_model.batch_input} can be left unspecified (it will be auto-generated).
-#' In that case, you can simply specify the function summarily as \code{fun.build_model}.
+#' If the tool does not distinguish between a single input matrix and multiple input matrices (it would just concatenate the inputs and apply \code{fun.build_model.single_input}), \code{fun.build_model.batch_input} can be left unspecified and it will be auto-generated.
+#' In that case, you can  specify the function summarily as \code{fun.build_model}.
 #'
 #' \code{fun.extract} is a function that takes a model object (generated by \code{fun.build_model...}) as input and extracts results of the model applied to the original input data.
-#' \code{fun.apply_model.single_input} takes a model object and a new coordinate matrix as input.
-#' It returns the result of applying the previously trained model on new data.
-#' \code{fun.apply_model.batch_input} takes a list of coordinate matrices as input.
+#' \code{fun.apply_model.single_input} takes a model object and a *new* coordinate matrix as input.
+#' It returns the result of applying the *previously* trained model on *new* data.
+#' \code{fun.apply_model.batch_input} takes a list of coordinate matrices as input and applies the model to new data.
 #' 
 #' Results of the \code{...batch_input} functions should not be split up into lists according to the sizes of the original inputs: they always return a single coordinate matrix or cluster vector (the splitting per sample is implemented automatically).
 #'
@@ -91,7 +93,8 @@ LoadWrappers <- function() {
 #'
 #' For example, a simple signature of a \code{fun.build_model...} function for the dimension-reduction tool \code{t-SNE} might be \code{function(input, latent_dim = 2, perplexity = 2)}, allowing the user to alter target dimensionality or the perplexity parameter.
 #'
-#' Signatures of the other modelling functions are fixed. For \code{fun.extract} it is \code{function(model)} and for \code{fun.apply_model...} it is \code{function(model, input)}.
+#' Signatures of the other modelling functions are fixed.
+#' For \code{fun.extract} it is \code{function(model)} and for \code{fun.apply_model...} it is \code{function(model, input)}.
 #'
 #' ## Additional inputs to model-building functions
 #'
@@ -99,19 +102,22 @@ LoadWrappers <- function() {
 #' \code{expression} is either a single matrix or a list of matrices, much like \code{input}.
 #' \code{input}, then, will be the output of the preceding projection tool in that given sub-pipeline.
 #' 
-#' If your particular dimension-reduction or clustering tool uses a \code{k}-nearest_neighbour graph (k-NNG), you can re-use one that was computed at the beginning of benchmark evaluation.
+#' If your tool uses a \code{k}-nearest_neighbour graph (k-NNG), you are encouraged to always use one that was computed at the beginning of your pipeline evaluation.
+#' (The \code{k}-NNG will be created if \code{SingleBench} knows it will run one or more tool that need it.)
 #' To do this, set \code{use_knn_graph} to \code{TRUE} and add the argument \code{knn} to the signature of your model-building functions.
 #' \code{knn} will then be a list of two names matrices: \code{Indices} for indices of nearest neighbours (row-wise) and \code{Distances} for distances to those neighbours.
+#' 
 #' **Warning**: the entries in \code{Indices} will be \code{1}-indexed and the matrices do not contain a column for the 'zero-th' neighbour (for each point, the zero-th neighbour is itself).
-#' To modify the \code{knn} object (to suit the input specifications of your method), you can use the convertor \code{kNNTweak}.
+#' To modify the \code{knn} object (switch to 0-indexing or include zero-th neighobur), use the convertor \code{kNNTweak} inside your model-building function.
 #' For instance, to convert \code{knn} to only a matrix of indices that does include zero-th neighbours, is 1-indexed and \code{k} is lowered from its original value to \code{30}, use: \code{knn <- kNNGTweak(knn, only_indices = TRUE, zero_index = TRUE, zeroth_neighbours = TRUE, new_k = 30)}.
 #'
 #' ## *n*-parameters
 #' 
-#' The vast majority of tools require can accept custom parameters.
-#' Any one of the arguments to a model-building function can be chosen as the *n*-parameter by the user: this means the benchmark pipeline iterates over multiple values of that parameter inside its subpipeline.
+#' Most tools can accept custom numeric parameters.
+#' Any one of the arguments to a model-building function can be chosen as the *n*-parameter by the user: then, \code{SingleBench} can do parameter sweeps over different values of these parameters.
 #' Dimension-reduction tools, if possible, should have a parameter \code{latent_dim} for iterating over latent-space dimensionality.
 #' Clustering tools, if possible, should have a parameter \code{n_clusters} for iterating over target cluster count.
+#' If there is an option to determine number of clusters automatically, it might be a good idea to use \code{n_clusters = 0} for this.
 #'
 #' For methods that are made to run on multiple CPU cores, set \code{prevent_parallel_execution} to \code{TRUE} (otherwise, \code{SingleBench} may attempt to run them in parallel if the user wants repeated runs for stability analysis).
 #'
@@ -132,7 +138,7 @@ LoadWrappers <- function() {
 #' @param use_knn_graph logical: whether the tool uses a \code{k}-nearest-neighbour graph of the input data. Default value is \code{FALSE}
 #'
 #' @return
-#' This function returns a wrapper function that can be used in the \code{Benchmark} constructor for setting up a benchmark pipeline.
+#' This function returns a wrapper function that can be used in constructing a benchmark pipeline using \code{Fix}, \code{Module} and \code{Subpipeline}.
 #'
 #' @export
 WrapTool <- function(
@@ -164,6 +170,7 @@ WrapTool <- function(
     if (length(python_modules_missing) > 0) {
       message(paste0('! -> ', type, ' wrapper "', name, '" is missing Python modules: ', paste(unlist(python_modules[python_modules_missing]), collapse = ', ')))
     }
+    prevent_parallel_execution <- TRUE
   }
   
   ## Outward-facing model-training function

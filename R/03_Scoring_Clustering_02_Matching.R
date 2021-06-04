@@ -2,6 +2,14 @@
 BijectiveMatch <- function(
   c1, c2, obj, unassigned, scoring_matrix = NULL
 ) {
+  
+  ## This function uses the Hungarian method to come up with a bijective
+  ## matching of groups in two clusterings (label assignments). An optional
+  ## scoring matrix, introducing different penalties for different types of
+  ## mismatches, can be given (this hasn't been tested much yet). Matches
+  ## are made so as to maximise an objective (probably F1 score). The average
+  ## value of this objective (not weighted by cluster size) is taken
+  
   ## Create integer mapping of each level of c1 and c2 with NAs for unassigned's
   
   levels(c1)[levels(c1) %in% unassigned] <- NA
@@ -115,6 +123,12 @@ BijectiveMatch <- function(
 RelaxedMatch <- function(
   c1, c2, obj, unassigned, reference_is_c2 = FALSE
 ) {
+  
+  ## This function uses matches populations to clusters (or clusters)
+  ## to populations so as to maximise an objective (see function BijectiveMatch),
+  ## and is not limited to the bijective (1-to-1) matching, possibly
+  ## resulting in 1-to-many matches
+  
   ## Create integer mapping of each level of c1 and c2 with NAs for unassigned's
   
   if (reference_is_c2) {

@@ -11,9 +11,9 @@ PlotClusterHeatmap(benchmark, idx.subpipeline, idcs.n_param = NULL)
 
 \item{idx.subpipeline}{integer value: index of subpipeline that includes a clustering step}
 
-\item{idcs.n_param}{integer or vector of integers: indices of \emph{n}-parameter(s) (cluster count) of interest. Default value is \code{NULL}, which translates to all \emph{n}-parameter iterations of the given sub-pipeline}
+\item{idcs.n_param}{integer or vector of integers: indices of \emph{n}-parameter(s) iterations of interest. Default value is \code{NULL}, which translates to all \emph{n}-parameter iterations of the given sub-pipeline (or none if \emph{n}-parameters were not used)}
 }
 \description{
-Creates a heatmap showing expression value medians per each cluster, taking clusters from a chosen subpipeline and \emph{n}-parameter iteration(s).
+Creates a heatmap showing expression value medians per each cluster, taking clusters from a chosen subpipeline (and \emph{n}-parameter iteration(s)).
 If multiple \emph{n}-parameter iterations are chosen, a list of plots is generated.
 }

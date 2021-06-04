@@ -52,6 +52,10 @@ Evaluate_ComputekNNMatrix <- function(
 #'
 #' * **\code{Denoise}**: denoises high-dimensional expression data to drive down unwanted technical variation
 #'
+#' @references 
+#' 
+#' The code for \code{annoy} is adopted from \code{ivis}: *Szubert, B., Cole, J.E., Monaco, C. et al. Structure-preserving visualisation of high dimensional single-cell datasets. Sci Rep 9, 8914 (2019). https://doi.org/10.1038/s41598-019-45301-0*
+#'
 #' @export
 ComputekNNMatrix <- function(
   exprs,

@@ -1,5 +1,10 @@
 
-ari <- function(c0, c1) { # Adjusted Rand Index
+ari <- function(c0, c1) {
+  
+  ## This function computes the Adjusted Rand Index (Rand index)
+  ## corrected for change, computed from the contingency table of
+  ## two clusterings/label assignments
+  
   counts <- table(c0, c1)
   if (nrow(counts) == 1 && ncol(counts) == 1)
     return(1)

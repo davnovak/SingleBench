@@ -2,7 +2,7 @@
 #' \code{Benchmark} object constructor
 #'
 #' Creates an object of type \code{Benchmark}, used to configure a benchmarking pipeline and input data.
-#' This object allows to run projection (dimension-reduction/denoising) and clustering pipelines on high-dimensional single-cell data (such as **flow cytometry**, **mass cytometry**, **CITE-seq**, **scRNA-seq**).
+#' This object allows to run projection (dimension-reduction/denoising) and clustering pipelines on high-dimensional single-cell data (such as from **flow cytometry**, **mass cytometry**, **CITE-seq**, **scRNA-seq**).
 #' 
 #' Once set up, use \code{Evaluate} to run the benchmark.
 #'
@@ -25,40 +25,43 @@
 #'
 #' A pipeline in made up of subpipelines, which are combinations of tools and their parameters.
 #' Each subpipeline can have one or both of two modules: projection and clustering.
-#' For instance, a single subpipeline for data smoothing, \code{ivis} latent-space projection and subsequent \code{FlowSOM} clustering is created using:
+#' For instance, a single subpipeline for data smoothing and subsequent \code{FlowSOM} clustering is created using:
 #' 
 #'      subpipelines <- list()
 #'      subpipelines[[1]] <- 
 #'          Subpipeline(
-#'              projection = list(
-#'                  Module(Fix('smooth', n_iter = 1, k = 50)),
-#'                  Module(Fix('ivis'), n_param = 'latent_dim')
-#'              ),
+#'              projection = list(Module(Fix('smooth', k = 50), n_param = 'n_iter')),
 #'              clustering = Module(Fix('FlowSOM', grid_width = 25, grid_height = 25), n_param = 'n_clusters')
 #'          )
 #' 
 #' Up to two *n*-parameters (one per projection step and one per clustering step) can be specified.
-#' This means that, within the subpipeline, we can iterate over multiple combinations of values of these parameters, gathering results for each of them.
+#' This means that, within the subpipeline, we can do parameter sweeps over multiple combinations of values of these parameters,
 #' These values need to be specified in the \code{Benchmark} constructor.
 #' For instance, to try out multiple latent-space dimensions and target cluster counts, we can specify:
 #' 
 #'       n_params <- list()
 #'       n_params[[1]] <- list(
-#'           projection = rep(c(20, 15, 10), each = 3),
-#'           clustering = rep(c(35, 40, 45), times = 3)
+#'           projection = rep(c(0, 1, 2, 4), each = 2),
+#'           clustering = c(30, 40)
 #'      )
 #'
-#' If you want to set up a second subpipeline that re-uses the projection step, you can simply clone results from the first subpipeline:
+#' If you want to set up a second subpipeline that re-uses the projection step, you can simply clone the same set-up:
 #' 
 #'      subpipeline[[2]] <-
 #'          Subpipeline(
 #'              projection = CloneFrom(1),
-#'              clustering = Module(Fix('Depeche'), n_param = 'k')
+#'              clustering = Module(Fix('Depeche'), n_param = 'fixed_penalty')
 #'          )
 #'      
 #'      n_params[[2]] <- list(
-#'          clustering = rep(c(20, 30, 40), times = 3)
+#'          projection = rep(c(0, 1, 2, 4, 5), each = 3),
+#'          clustering = c(2, 3, 4)
 #'      )
+#'
+#' Since we used \code{CloneFrom}, any results that have been produced during the first subpipeline and are also used in the second one will be recycled (they are not produced again nor are they actually copied).
+#'
+#' Of course *n*-parameter do not need to be specified, in which case they are simply not used (only one result is produced for the subpipeline).
+#' Similarly, only one subpipeline per pipeline can be generated (leading to a simgle result of the pipeline).
 #'
 #' # Stability analysis of clustering
 #'   
@@ -69,7 +72,7 @@
 #' 
 #' # Train-and-map
 #' 
-#' Some projection and clustering methods allow you to train a model on a subset of your input data and map the results onto the rest.
+#' Some projection and clustering tools allow you to train a model on a subset of your input data and map the results onto the rest.
 #' If your input dataset consists of multiple FCS files, \code{flowFrame}s or \code{SummarizedExperiment} batches, you can specify the training set indices in \code{projection.training_set} and \code{clustering.training_set}.
 #' 
 #' # Hierarchical labelling

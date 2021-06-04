@@ -1,4 +1,12 @@
 
+.WhatIs.ValidityChecks <- function(e) {
+  if (is.null(e$cluster) && is.null(e$population)) {
+    stop('Either "cluster" or "population" has to be given')
+  } else if (!is.null(e$cluster) && !is.null(e$population)) {
+    stop('Either "cluster" or "population" has to be given, but not both')
+  }
+}
+
 .Plot.ValidityChecks <- function(e) {
   if (class(e$benchmark) != 'Benchmark')
     stop('"benchmark" not a valid Benchmark object')

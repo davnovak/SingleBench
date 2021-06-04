@@ -2,6 +2,12 @@
 SeparateIntoSamples <- function(
   obj, benchmark, single = FALSE
 ) {
+  
+  ## This function takes the concatenated output of a projection/clustering tool
+  ## (transformed data or a vector of cluster indices) and converts it to a list
+  ## of separate outputs per input sample (if multiple separate samples were given)
+  ## as input
+  
   if (benchmark$stability == 'single' || single) {
     if (length(benchmark$row_count) == 1)
       return(obj)
@@ -23,7 +29,6 @@ SeparateIntoSamples <- function(
     return(obj)
   }
 }
-  
   
 
 ResolveFeatureIndices <- function(
@@ -54,6 +59,11 @@ GatherInput <- function(
   remove_labels,
   verbose
 ) {
+  
+  ## This function gathers and pre-processes input data to a benchmark pipeline.
+  ## These data come either from paths to FCS files, a flowSet object or a
+  ## SummarizedExperiment object
+  
   if (!is.null(input_labels) && !is.list(input_labels))
     input_labels <- list(input_labels)
   if (input_class == 'fcs_paths')

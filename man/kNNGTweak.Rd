@@ -24,8 +24,8 @@ kNNGTweak(
 \item{new_k}{optional integer value: new \code{k} for \code{k}-NN. Default value is \code{NULL}}
 }
 \description{
-Makes changes to a \code{k}-nearest-neighbour graph object produced by \code{SingleBench} to change it toa format required by some particular tool.
-You will typically want to use this inside \code{WrapTool} to change the format of a pre-computed \code{knn} object for use with a dimension-reduction or clustering tool (to avoid re-computing the \code{k}-NN graph if not necessary).
+Changes format of a \code{k}-nearest-neighbour graph (\code{k}-NNG) object produced by \code{SingleBench}.
+You will typically want to use this inside \code{WrapTool} to change the format of a pre-computed \code{k}-NNG object for use with a projection or clustering tool.
 To only keep the \code{Indices} slot of \code{knn} (only keeping a single matrix instead of a list of two matrices), set parameter \code{only_indices} to \code{TRUE}.
 To modify the \code{Indices} slot of \code{knn} to use zero-indexing, set parameter \code{zero_index} to \code{TRUE}.
 To include the zero-th neighbour (self) for each point in \code{knn}, set parameter \code{zeroth_neighbour} to \code{TRUE}.

@@ -1,4 +1,6 @@
 
+## These are helper functions for printing messages using different colours and typefaces
+
 .msg          <- function(...) cat(crayon::bold(crayon::white(paste0(...))))
 .msg_alt      <- function(...) cat(crayon::italic(crayon::bold(paste0(...))))
 .msg_val      <- function(...) cat(crayon::italic(crayon::bgBlack(crayon::white(paste0(...)))))

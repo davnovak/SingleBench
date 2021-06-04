@@ -38,11 +38,12 @@ Evaluate(
 }
 \description{
 This function evaluates a benchmark pipeline, specified by an object of type \code{Benchmark}.
-This means that all the projection, clustering or projection->clustering subpipelines that were set up when creating the benchmark object are executed, and their performance is assessed using various evaluation metrics.
-Both the benchmark object and its auxiliary HDF5 file are needed for this.
+This means that all the projection, clustering or projection->clustering subpipelines that were set up when creating the benchmark object are executed, and their performance is scored.
+Both the benchmark object and its auxiliary HDF5 file (created when the \code{Benchmark} constructor was called) are needed for this.
 }
 \section{Optional scoring of projection steps}{
 Optionally, results of projection steps (if included) can be scored using evaluation metrics designed to measure the quality of dimension reduction (preservation of information versus original high-dimensional data).
+This makes sense for methods that reduce dimensionality of the original data for the purposes of visualisation or to make the data more amenable to clustering.
 To turn on scoring of projection steps, set parameter \code{score_projection} to \code{TRUE}.
 Based on a numeric bound (parameter \code{projection_collapse_n}), metrics based exclusively on \emph{k}-nearest-neighbour graphs of original data and each projection will be computed if the row count of input data exceeds that value.
 If the row count is lower than or equal to the limit, full distance matrices (quadratic complexity) will be computed.

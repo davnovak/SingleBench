@@ -8,4 +8,5 @@ LoadWrappers()
 }
 \description{
 (Re-)loads wrappers defined in \code{inst/extdata/wrappers_projection} and \code{inst/extdata/wrappers_clustering} in the \code{SingleBench} package directory.
+This can be used if you changed any of them or you removed the wrapper functions from your global namespace.
 }

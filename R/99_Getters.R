@@ -432,6 +432,19 @@ GetNParameterValues <- function(
   )
 }
 
+#' Get \code{Benchmark} *n*-parameter iteration names of a subpipeline
+#'
+#' Extracts names of all *n*-parameter iterations of a subpipeline in a \code{Benchmark} object (benchmark pipeline set-up).
+#' 
+#' @param benchmark object of type \code{Benchmark}
+#' @param idx.subpipeline integer: index of a subpipeline of \code{benchmark}
+#' @param with_tool_names logical: whether names of the modules should be included. Default value is \code{FALSE}
+#'
+#' @seealso
+#' 
+#' * **\code{Benchmark}**: constructs a \code{Benchmark} object (benchmark pipeline set-up)
+#'
+#' @export
 GetNParameterNames <- function(
   benchmark,
   idx.subpipeline,
@@ -848,6 +861,22 @@ GetClusteringScoringTable <- function(
   }
 }
 
+#' Get RMSDs of each cluster in clustering result of an evaluated \code{Benchmark} pipeline
+#'
+#' Returns the vector of RMSDs per cluster.
+#' 
+#' @param benchmark object of type \code{Benchmark}
+#' @param idx.subpipeline integer: index of a sub-pipeline of \code{benchmark} that includes a clustering step
+#' @param idx.n_param integer: index of *n*-parameter iteration of a subpipeline of \code{benchmark} (if *n*-parameters specified). Default value is \code{NULL}
+#' @param idx.run integer: index of clustering run if repeated runs were evaluated. Default value is 1
+#'
+#' @seealso
+#' 
+#' * **\code{Benchmark}**: constructs a \code{Benchmark} object (benchmark pipeline set-up)
+#'
+#' * **\code{Evaluate}**: runs all benchmark sub-pipelines and scores the performance of each tool
+#'
+#' @export
 GetRMSDPerCluster <- function(
   benchmark,
   idx.subpipeline,
@@ -855,7 +884,7 @@ GetRMSDPerCluster <- function(
   idx.run = NULL
 ) {
   cl <- GetClustering(benchmark, idx.subpipeline, idx.n_param, all_runs = TRUE)
-  exprs <- GetExpressionMatrix(benchmark)
+  exprs <- GetExpressionMatrix(benchmark, concatenate = TRUE)
   if (benchmark$stability == 'repeat' && !is.null(idx.run)) {
     cl <- cl[[idx.run]]
     return(rmsd_per_cluster(exprs, cl))
@@ -915,7 +944,7 @@ GetRMSDPerPopulation <- function(
     matching <- matching$`Fixed Label`
   } else if (match_type == 'real') {
     annot <- GetAnnotation(b, concatenate = TRUE)
-    res <- rmsd_per_cluster(GetExpressionMatrix(b), annot)
+    res <- rmsd_per_cluster(GetExpressionMatrix(b, concatenate = TRUE), annot)
     names(res) <- levels(annot)
     if (!is.null(benchmark$unassigned_labels)) {
       res <- res[!names(res) %in% benchmark$unassigned_labels]
