@@ -1,9 +1,7 @@
 
 .WhatIs.ValidityChecks <- function(e) {
-  if (is.null(e$cluster) && is.null(e$population)) {
-    stop('Either "cluster" or "population" has to be given')
-  } else if (!is.null(e$cluster) && !is.null(e$population)) {
-    stop('Either "cluster" or "population" has to be given, but not both')
+  if (!is.null(e$cluster) && is.null(e$idx.subpipeline)) {
+    stop('For retrieving a cluster, "idx.subpipeline" must be given')
   }
 }
 

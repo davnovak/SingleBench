@@ -73,6 +73,7 @@ export("GetMatchedClusterSizes")
 export("GetChannelsAndMarkers")
 export("PlotRMSDToSize")
 export("ScoreAnnotation")
+export("WhatIs")
 
 export("Jacc")
 
