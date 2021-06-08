@@ -3,35 +3,22 @@ importFrom(Rcpp, evalCpp)
 
 importFrom(magrittr,"%>%")
 importFrom(foreach,"%dopar%")
-importFrom(grid, gpar)
-importFrom(grid, grobTree)
-importFrom(grid, textGrob)
-importFrom(grid, rectGrob)
-importFrom(grid, viewport)
-importFrom(grid, unit)
-importFrom(ggplot2, ggplot)
-importFrom(ggplot2, aes)
-importFrom(ggplot2, geom_bar)
-importFrom(ggplot2, coord_flip)
-importFrom(ggplot2, scale_fill_manual)
-importFrom(ggplot2, scale_fill_gradient)
-importFrom(ggplot2, geom_text)
-importFrom(ggplot2, geom_point)
-importFrom(ggplot2, geom_line)
-importFrom(ggplot2, geom_tile)
-importFrom(ggplot2, geom_errorbar)
-importFrom(ggplot2, labs)
-importFrom(ggplot2, xlab)
-importFrom(ggplot2, ylab)
-importFrom(ggplot2, guides)
-importFrom(ggplot2, guide_legend)
-importFrom(ggplot2, scale_x_discrete)
-importFrom(ggplot2, ggtitle)
-importFrom(ggplot2, theme)
-importFrom(ggplot2, theme_minimal)
-importFrom(ggplot2, theme_dark)
-importFrom(ggplot2, theme_grey)
-importFrom(ggplot2, facet_wrap)
+
+importFrom(
+  "grid",
+  
+  "gpar", "grobTree", "textGrob", "rectGrob", "viewport", "unit"
+)
+
+importFrom(
+  "ggplot2",
+           
+  "ggplot", "aes",
+  "geom_bar", "coord_flip", "scale_fill_manual", "scale_fill_gradient", "geom_text",
+  "geom_point", "geom_line", "geom_tile", "geom_errorbar", "labs", "xlab", "ylab",
+  "guides", "guide_legend", "scale_x_discrete", "ggtitle", "theme", "theme_minimal",
+  "theme_dark", "theme_grey", "facet_wrap", "geom_vline", "geom_hline"
+)
 
 export("WrapTool")
 export("Fix")
